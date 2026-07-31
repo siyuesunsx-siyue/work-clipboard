@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>工作剪贴板</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <main class="shell">
+      <aside class="sidebar" aria-label="剪贴板概览">
+        <div class="brand">
+          <img class="brand-mark" src="icons/icon-128.png" alt="">
+          <div>
+            <h1>工作剪贴板</h1>
+            <p id="todayLabel">今日中转</p>
+          </div>
+        </div>
+
+        <section class="stats" aria-label="统计">
+          <div>
+            <strong id="totalCount">0</strong>
+            <span>全部</span>
+          </div>
+          <div>
+            <strong id="fileCount">0</strong>
+            <span>文件</span>
+          </div>
+          <div>
+            <strong id="stashCount">0</strong>
+            <span>暂存</span>
+          </div>
+        </section>
+
+        <div id="companionStatus" class="companion-status">仅浏览器内捕获</div>
+
+        <nav class="filters" aria-label="筛选">
+          <button class="filter is-active" data-filter="active">今天</button>
+          <button class="filter" data-filter="stashed">暂存</button>
+          <button class="filter" data-filter="all">全部</button>
+          <button class="filter" data-filter="cleanup">清理</button>
+        </nav>
+
+        <button id="cleanupButton" class="primary-action" type="button">下班清理</button>
+      </aside>
+
+      <section class="workspace">
+        <header class="toolbar">
+          <div class="search-wrap">
+            <input id="searchInput" type="search" placeholder="搜索文本、文件名、标签" autocomplete="off">
+          </div>
+          <div class="toolbar-actions">
+            <input id="fileInput" type="file" multiple hidden>
+            <button id="fileButton" type="button">添加文件</button>
+            <button id="pasteButton" type="button">读取剪贴板</button>
+          </div>
+        </header>
+
+        <section id="dropZone" class="capture-zone" tabindex="0">
+          <textarea id="textInput" placeholder="在这里粘贴文本、图片、文件，或拖拽文件进来。按 Ctrl+Enter 保存文本。" rows="5"></textarea>
+          <div class="capture-actions">
+            <input id="tagInput" type="text" placeholder="标签，例如 客户A, 素材, 发票">
+            <button id="saveTextButton" type="button">保存文本</button>
+          </div>
+        </section>
+
+        <section class="list-head">
+          <div>
+            <h2 id="viewTitle">今天的中转内容</h2>
+            <p id="viewHint">数据只保存在本机浏览器，不会上传。</p>
+          </div>
+          <button id="exportVisibleButton" type="button">导出当前列表</button>
+        </section>
+
+        <section id="itemsList" class="items" aria-live="polite"></section>
+      </section>
+    </main>
+
+    <template id="itemTemplate">
+      <article class="item">
+        <div class="item-main">
+          <div class="item-topline">
+            <span class="item-kind"></span>
+            <time class="item-time"></time>
+          </div>
+          <h3 class="item-title"></h3>
+          <p class="item-preview"></p>
+          <div class="item-tags"></div>
+        </div>
+        <div class="item-actions">
+          <button class="copy-action" type="button">复制</button>
+          <button class="download-action" type="button">保存到本地</button>
+          <button class="stash-action" type="button">暂存</button>
+          <button class="delete-action danger" type="button">删除</button>
+        </div>
+      </article>
+    </template>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+    <script src="newtab.js"></script>
+  </body>
+</html>

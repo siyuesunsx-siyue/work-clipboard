@@ -1,0 +1,7 @@
+clipboard-watch.log
+clipboard-watch.pid
+dist/
+*.zip
+*.crx
+Thumbs.db
+.DS_Store
