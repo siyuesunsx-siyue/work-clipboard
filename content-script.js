@@ -36,8 +36,21 @@ function initWorkClipboardCapture() {
     return selectedTextFromActiveElement() || window.getSelection()?.toString() || "";
   }
 
+  function safeSendMessage(message) {
+    try {
+      if (!chrome?.runtime?.id) return false;
+      chrome.runtime.sendMessage(message, () => {
+        // Reading lastError prevents Chrome from surfacing expected disconnect noise.
+        void chrome.runtime.lastError;
+      });
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   function sendCopiedText(text, html = "") {
-    const cleanText = text.trim();
+    const cleanText = String(text || "").trim();
 
     if (!cleanText) return false;
 
@@ -45,7 +58,7 @@ function initWorkClipboardCapture() {
     if (signature === lastCopySignature) return false;
     lastCopySignature = signature;
 
-    chrome.runtime.sendMessage({
+    return safeSendMessage({
       type: "CAPTURED_COPY",
       payload: {
         text: cleanText,
@@ -53,9 +66,7 @@ function initWorkClipboardCapture() {
         pageTitle: document.title,
         pageUrl: location.href
       }
-    }).catch(() => {});
-
-    return true;
+    });
   }
 
   async function readClipboardTextSoon() {
