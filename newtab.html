@@ -3,17 +3,17 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>工作剪贴板</title>
+    <title>临泊站</title>
     <link rel="stylesheet" href="styles.css">
   </head>
   <body>
     <main class="shell">
-      <aside class="sidebar" aria-label="剪贴板概览">
+      <aside class="sidebar" aria-label="临泊站概览">
         <div class="brand">
           <img class="brand-mark" src="icons/icon-128.png" alt="">
           <div>
-            <h1>工作剪贴板</h1>
-            <p id="todayLabel">今日中转</p>
+            <h1>临泊站</h1>
+            <p id="todayLabel">今日临泊</p>
           </div>
         </div>
 
@@ -35,13 +35,13 @@
         <div id="companionStatus" class="companion-status">仅浏览器内捕获</div>
 
         <nav class="filters" aria-label="筛选">
-          <button class="filter is-active" data-filter="active">今天</button>
+          <button class="filter is-active" data-filter="active">今日车位</button>
           <button class="filter" data-filter="stashed">暂存</button>
           <button class="filter" data-filter="all">全部</button>
-          <button class="filter" data-filter="cleanup">清理</button>
+          <button class="filter" data-filter="cleanup">清场</button>
         </nav>
 
-        <button id="cleanupButton" class="primary-action" type="button">下班清理</button>
+        <button id="cleanupButton" class="primary-action" type="button">下班清场</button>
       </aside>
 
       <section class="workspace">
@@ -57,17 +57,17 @@
         </header>
 
         <section id="dropZone" class="capture-zone" tabindex="0">
-          <textarea id="textInput" placeholder="在这里粘贴文本、图片、文件，或拖拽文件进来。按 Ctrl+Enter 保存文本。" rows="5"></textarea>
+          <textarea id="textInput" placeholder="把临时要停放的文本、图片或文件放在这里。按 Ctrl+Enter 入位。" rows="5"></textarea>
           <div class="capture-actions">
-            <input id="tagInput" type="text" placeholder="标签，例如 客户A, 素材, 发票">
-            <button id="saveTextButton" type="button">保存文本</button>
+            <input id="tagInput" type="text" placeholder="用途标签，例如 稍后看, 要发送, 素材">
+            <button id="saveTextButton" type="button">停放文本</button>
           </div>
         </section>
 
         <section class="list-head">
           <div>
-            <h2 id="viewTitle">今天的中转内容</h2>
-            <p id="viewHint">数据只保存在本机浏览器，不会上传。</p>
+            <h2 id="viewTitle">今日临泊内容</h2>
+            <p id="viewHint">每条内容会尽量显示来源和处理建议。</p>
           </div>
           <button id="exportVisibleButton" type="button">导出当前列表</button>
         </section>
@@ -85,7 +85,10 @@
           </div>
           <h3 class="item-title"></h3>
           <p class="item-preview"></p>
+          <p class="item-context"></p>
+          <div class="item-advice"></div>
           <div class="item-tags"></div>
+          <div class="quick-tags" aria-label="快速用途标签"></div>
         </div>
         <div class="item-actions">
           <button class="copy-action" type="button">复制</button>
@@ -96,6 +99,18 @@
       </article>
     </template>
 
+    <div id="confirmModal" class="modal" hidden>
+      <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
+        <h2 id="confirmTitle">确认清出这个临泊位？</h2>
+        <p id="confirmText">清出后，这条内容会从临泊站删除。</p>
+        <div class="modal-actions">
+          <button id="cancelDeleteButton" type="button">再停一会儿</button>
+          <button id="confirmDeleteButton" class="danger-action" type="button">清出车位</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="celebrationLayer" class="celebration-layer" aria-hidden="true"></div>
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
     <script src="newtab.js"></script>
   </body>

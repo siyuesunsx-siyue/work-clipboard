@@ -1,6 +1,22 @@
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 Add-Type -AssemblyName System.Web.Extensions
+Add-Type @"
+using System;
+using System.Text;
+using System.Runtime.InteropServices;
+
+public static class ForegroundWindow {
+  [DllImport("user32.dll")]
+  public static extern IntPtr GetForegroundWindow();
+
+  [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+  public static extern int GetWindowText(IntPtr hWnd, StringBuilder text, int count);
+
+  [DllImport("user32.dll")]
+  public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint processId);
+}
+"@
 
 $ErrorActionPreference = "Continue"
 $Port = 18765
@@ -52,6 +68,28 @@ function First-TextLine([string]$Text, [string]$Fallback) {
   return [string]$line
 }
 
+function Get-SourceContext {
+  try {
+    $handle = [ForegroundWindow]::GetForegroundWindow()
+    $builder = New-Object System.Text.StringBuilder 512
+    [void][ForegroundWindow]::GetWindowText($handle, $builder, $builder.Capacity)
+    [uint32]$processId = 0
+    [void][ForegroundWindow]::GetWindowThreadProcessId($handle, [ref]$processId)
+    $process = Get-Process -Id $processId -ErrorAction SilentlyContinue
+
+    return @{
+      sourceApp = if ($process) { [string]$process.ProcessName } else { "" }
+      sourceWindow = [string]$builder.ToString()
+    }
+  }
+  catch {
+    return @{
+      sourceApp = ""
+      sourceWindow = ""
+    }
+  }
+}
+
 function Capture-Text {
   if (-not [System.Windows.Forms.Clipboard]::ContainsText()) {
     return
@@ -63,11 +101,14 @@ function Capture-Text {
   }
 
   $hash = Get-Sha256Text $text
+  $source = Get-SourceContext
   Add-ClipboardItem @{
     id = "win-text-$hash"
     type = "text"
     title = (First-TextLine $text "复制的文本")
     text = [string]$text
+    sourceApp = $source.sourceApp
+    sourceWindow = $source.sourceWindow
     createdAt = [DateTimeOffset]::Now.ToUnixTimeMilliseconds()
     tags = @("系统剪贴板", "Ctrl+C")
   } "text:$hash"
@@ -89,6 +130,7 @@ function Capture-Image {
     $bytes = $stream.ToArray()
     $hash = Get-Sha256 $bytes
     $now = [DateTimeOffset]::Now.ToUnixTimeMilliseconds()
+    $source = Get-SourceContext
 
     Add-ClipboardItem @{
       id = "win-image-$hash"
@@ -98,6 +140,8 @@ function Capture-Image {
       fileName = "screenshot-$now.png"
       size = $bytes.Length
       base64 = [Convert]::ToBase64String($bytes)
+      sourceApp = $source.sourceApp
+      sourceWindow = $source.sourceWindow
       createdAt = $now
       tags = @("系统剪贴板", "截图")
     } "image:$hash"
@@ -120,12 +164,15 @@ function Capture-Files {
 
   $text = ($paths -join "`r`n")
   $hash = Get-Sha256Text $text
+  $source = Get-SourceContext
 
   Add-ClipboardItem @{
     id = "win-files-$hash"
     type = "text"
     title = "复制的文件路径"
     text = [string]$text
+    sourceApp = $source.sourceApp
+    sourceWindow = $source.sourceWindow
     createdAt = [DateTimeOffset]::Now.ToUnixTimeMilliseconds()
     tags = @("系统剪贴板", "文件路径")
   } "files:$hash"
@@ -168,6 +215,8 @@ function Write-JsonResponse($Stream, $Value) {
       fileName = if ($null -ne $item["fileName"]) { [string]$item["fileName"] } else { $null }
       size = if ($null -ne $item["size"]) { [int64]$item["size"] } else { $null }
       base64 = if ($null -ne $item["base64"]) { [string]$item["base64"] } else { $null }
+      sourceApp = if ($null -ne $item["sourceApp"]) { [string]$item["sourceApp"] } else { "" }
+      sourceWindow = if ($null -ne $item["sourceWindow"]) { [string]$item["sourceWindow"] } else { "" }
       createdAt = [int64]$item["createdAt"]
       tags = @($item["tags"] | ForEach-Object { [string]$_ })
     }

@@ -2,8 +2,8 @@ $ErrorActionPreference = "Stop"
 
 $Root = Split-Path -Parent $MyInvocation.MyCommand.Path
 $Dist = Join-Path $Root "dist"
-$ZipPath = Join-Path $Dist "work-clipboard.zip"
-$Temp = Join-Path $Dist "work-clipboard"
+$ZipPath = Join-Path $Dist "parkit.zip"
+$Temp = Join-Path $Dist "parkit"
 
 if (Test-Path $Temp) {
   Remove-Item $Temp -Recurse -Force

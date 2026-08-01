@@ -32,7 +32,12 @@ const els = {
   viewHint: document.querySelector("#viewHint"),
   itemsList: document.querySelector("#itemsList"),
   template: document.querySelector("#itemTemplate"),
-  toast: document.querySelector("#toast")
+  toast: document.querySelector("#toast"),
+  confirmModal: document.querySelector("#confirmModal"),
+  confirmText: document.querySelector("#confirmText"),
+  cancelDeleteButton: document.querySelector("#cancelDeleteButton"),
+  confirmDeleteButton: document.querySelector("#confirmDeleteButton"),
+  celebrationLayer: document.querySelector("#celebrationLayer")
 };
 
 let dbPromise;
@@ -108,6 +113,68 @@ function makeId() {
   return `${Date.now()}-${crypto.randomUUID()}`;
 }
 
+function normalizeText(text) {
+  return String(text || "").trim().replace(/\s+/g, " ");
+}
+
+function textContentKey(text) {
+  const normalized = normalizeText(text);
+  return normalized ? `text:${normalized.toLowerCase()}` : "";
+}
+
+function textNearDuplicateKey(text) {
+  const normalized = normalizeText(text).toLowerCase();
+  if (!normalized) return "";
+
+  return `text-near:${normalized.slice(0, 120)}`;
+}
+
+function duplicateQuality(item) {
+  if (item.sourceUrl) return 4;
+  if (item.id?.startsWith("web-text-")) return 3;
+  if (item.id?.startsWith("win-text-")) return 2;
+  return 1;
+}
+
+async function removeDuplicateTextItems(items) {
+  const groups = new Map();
+
+  for (const item of items) {
+    if (item.kind !== "text") continue;
+
+    const key = textNearDuplicateKey(item.text);
+    if (!key) continue;
+
+    if (!groups.has(key)) {
+      groups.set(key, []);
+    }
+
+    groups.get(key).push(item);
+  }
+
+  const duplicateIds = [];
+
+  for (const group of groups.values()) {
+    if (group.length < 2) continue;
+
+    const [keep, ...duplicates] = group.sort((a, b) => {
+      const qualityDelta = duplicateQuality(b) - duplicateQuality(a);
+      return qualityDelta || b.createdAt - a.createdAt;
+    });
+
+    for (const item of duplicates) {
+      duplicateIds.push(item.id);
+      rememberDeletedCompanionId(item.id);
+    }
+  }
+
+  for (const id of duplicateIds) {
+    await deleteItem(id);
+  }
+
+  return duplicateIds.length > 0;
+}
+
 function todayKey(date = new Date()) {
   return date.toISOString().slice(0, 10);
 }
@@ -117,6 +184,10 @@ function tagsFromInput() {
     .split(/[,，\s]+/)
     .map((tag) => tag.trim())
     .filter(Boolean);
+}
+
+function uniqueTags(tags) {
+  return [...new Set((tags || []).map((tag) => String(tag).trim()).filter(Boolean))];
 }
 
 function formatDateTime(value) {
@@ -144,6 +215,209 @@ function bytesToLabel(bytes) {
   return `${(bytes / 1024 ** index).toFixed(index ? 1 : 0)} ${units[index]}`;
 }
 
+function sessionKey(value) {
+  const date = new Date(value);
+  date.setMinutes(Math.floor(date.getMinutes() / 15) * 15, 0, 0);
+  return date.getTime();
+}
+
+function sessionLabel(value) {
+  const start = new Date(Number(value));
+  const end = new Date(start.getTime() + 15 * 60 * 1000);
+  const formatter = new Intl.DateTimeFormat("zh-CN", {
+    hour: "2-digit",
+    minute: "2-digit"
+  });
+  return `${formatter.format(start)} - ${formatter.format(end)} 临泊内容`;
+}
+
+function firstUrl(text) {
+  const match = String(text || "").match(/https?:\/\/[^\s"'<>]+/i);
+  return match ? match[0] : "";
+}
+
+function parseUrlInfo(text) {
+  const rawUrl = firstUrl(text);
+  if (!rawUrl) return null;
+
+  try {
+    const url = new URL(rawUrl);
+    const host = url.hostname.replace(/^www\./, "");
+    const isYouTube = /(^|\.)youtube\.com$|(^|\.)youtu\.be$/.test(host);
+    const time = url.searchParams.get("t") || "";
+    return {
+      url: rawUrl,
+      host,
+      isYouTube,
+      time,
+      label: isYouTube ? "YouTube 视频" : host.includes("github.com") ? "GitHub 链接" : "网页链接"
+    };
+  } catch {
+    return null;
+  }
+}
+
+function formatYouTubeTime(value) {
+  if (!value) return "";
+  const compact = String(value).match(/^(\d+)s?$/);
+  const seconds = compact ? Number(compact[1]) : 0;
+  if (!seconds) return value;
+  const minutes = Math.floor(seconds / 60);
+  return `${minutes}:${String(seconds % 60).padStart(2, "0")}`;
+}
+
+function pathLines(text) {
+  return String(text || "")
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .filter((line) => /^[a-zA-Z]:\\/.test(line) || /^\\\\/.test(line));
+}
+
+function filePathInfo(text) {
+  const paths = pathLines(text);
+  if (!paths.length) return null;
+
+  const first = paths[0];
+  const parts = first.split(/[\\\/]/).filter(Boolean);
+  const fileName = parts.at(-1) || first;
+  const folder = parts.slice(0, -1).join("\\");
+  const extension = (fileName.match(/\.([^.]+)$/)?.[1] || "").toLowerCase();
+  const typeMap = {
+    png: "图片",
+    jpg: "图片",
+    jpeg: "图片",
+    gif: "图片",
+    webp: "图片",
+    pdf: "PDF",
+    doc: "Word",
+    docx: "Word",
+    xls: "Excel",
+    xlsx: "Excel",
+    zip: "压缩包",
+    rar: "压缩包",
+    js: "代码",
+    html: "代码",
+    css: "代码",
+    ps1: "脚本"
+  };
+
+  return {
+    fileName,
+    folder,
+    count: paths.length,
+    extension,
+    type: typeMap[extension] || (extension ? `${extension.toUpperCase()} 文件` : "文件路径")
+  };
+}
+
+async function getUrlMetadata(text) {
+  const info = parseUrlInfo(text);
+  if (!info) return null;
+
+  const metadata = {
+    url: info.url,
+    urlHost: info.host,
+    urlKind: info.label,
+    urlTime: info.isYouTube ? formatYouTubeTime(info.time) : ""
+  };
+
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), 3500);
+
+  try {
+    const response = await fetch(info.url, {
+      cache: "force-cache",
+      signal: controller.signal
+    });
+    const type = response.headers.get("content-type") || "";
+    if (type && !type.includes("text/html")) {
+      return metadata;
+    }
+
+    const html = await response.text();
+    const title = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1]
+      .replace(/\s+/g, " ")
+      .trim();
+    if (title) {
+      metadata.urlTitle = title.slice(0, 120);
+    }
+  } catch {
+    // URL title enrichment is optional. Domain/type context is still useful.
+  } finally {
+    window.clearTimeout(timeout);
+  }
+
+  return metadata;
+}
+
+function contextLine(item) {
+  const parts = [];
+  const urlInfo = parseUrlInfo(item.text || item.sourceUrl || "");
+  const fileInfo = filePathInfo(item.text);
+
+  if (item.urlTitle) {
+    parts.push(`页面：${item.urlTitle}`);
+  } else if (item.sourceTitle) {
+    parts.push(`页面：${item.sourceTitle}`);
+  } else if (item.urlKind || urlInfo?.label) {
+    parts.push(item.urlKind || urlInfo.label);
+  }
+
+  if (item.urlHost || urlInfo?.host || item.sourceUrl) {
+    const sourceHost = item.sourceUrl ? parseUrlInfo(item.sourceUrl)?.host : "";
+    parts.push(item.urlHost || urlInfo?.host || sourceHost);
+  }
+
+  if (item.urlTime || urlInfo?.time) {
+    parts.push(`时间点 ${item.urlTime || formatYouTubeTime(urlInfo.time)}`);
+  }
+
+  if (fileInfo) {
+    parts.push(`${fileInfo.type}：${fileInfo.fileName}`);
+    if (fileInfo.count > 1) parts.push(`${fileInfo.count} 个路径`);
+    if (fileInfo.folder) parts.push(`目录：${fileInfo.folder}`);
+  }
+
+  if (item.sourceApp) {
+    parts.push(`来自 ${item.sourceApp}`);
+  }
+
+  if (item.sourceWindow) {
+    parts.push(`窗口：${item.sourceWindow}`);
+  }
+
+  if (item.kind === "file" && item.mime?.startsWith("image/")) {
+    parts.push("截图或图片");
+  }
+
+  return parts.join(" / ");
+}
+
+function adviceForItem(item) {
+  const tags = item.tags || [];
+  const urlInfo = parseUrlInfo(item.text || "");
+  const fileInfo = filePathInfo(item.text);
+
+  if (tags.some((tag) => ["稍后看", "要发送", "素材", "待处理"].includes(tag))) {
+    return { label: "建议保存", type: "save", reason: "已有用途标签" };
+  }
+
+  if (item.kind === "file" && item.mime?.startsWith("image/")) {
+    return { label: "建议暂存", type: "stash", reason: "截图通常需要回看来源" };
+  }
+
+  if (urlInfo || fileInfo) {
+    return { label: "建议暂存", type: "stash", reason: "链接或路径需要确认用途" };
+  }
+
+  if (normalizeText(item.text).length < 18) {
+    return { label: "建议删除", type: "delete", reason: "短文本更像临时中转" };
+  }
+
+  return { label: "建议暂存", type: "stash", reason: "普通文本，先确认上下文" };
+}
+
 function getVisibleItems() {
   const query = state.query.toLowerCase();
   const today = todayKey();
@@ -162,6 +436,12 @@ function getVisibleItems() {
         item.text,
         item.fileName,
         item.mime,
+        item.sourceApp,
+        item.sourceWindow,
+        item.sourceTitle,
+        item.sourceUrl,
+        item.urlTitle,
+        item.urlHost,
         ...(item.tags || [])
       ].join(" ").toLowerCase();
       return haystack.includes(query);
@@ -171,10 +451,10 @@ function getVisibleItems() {
 
 function setViewCopy() {
   const copy = {
-    active: ["今天的中转内容", "粘贴、拖拽或读取剪贴板后会出现在这里。"],
-    stashed: ["暂存内容", "暂存项不会被下班清理误删。"],
-    all: ["全部内容", "包含今天、历史和暂存的所有项目。"],
-    cleanup: ["下班清理队列", "逐项确认删除、暂存，或保存到本地。"]
+    active: ["今日临泊内容", "每条内容会尽量显示来源和处理建议。"],
+    stashed: ["已暂存车位", "这些内容不会被下班清场误删。"],
+    all: ["全部临泊记录", "包含今天、历史和暂存的所有项目。"],
+    cleanup: ["下班清场队列", "根据上下文判断删除、暂存，或保存到本地。"]
   }[state.filter];
 
   els.viewTitle.textContent = copy[0];
@@ -201,14 +481,42 @@ function renderItems() {
     return;
   }
 
+  const groups = new Map();
   for (const item of visibleItems) {
+    const key = sessionKey(item.createdAt);
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(item);
+  }
+
+  for (const [key, groupItems] of groups) {
+    const group = document.createElement("section");
+    group.className = "session-group";
+
+    const title = document.createElement("h3");
+    title.className = "session-title";
+    title.textContent = sessionLabel(key);
+    group.append(title);
+
+    for (const item of groupItems) {
     const node = els.template.content.firstElementChild.cloneNode(true);
+    node.dataset.itemId = item.id;
     node.querySelector(".item-kind").textContent = item.kind === "file" ? "文件" : "文本";
     node.querySelector(".item-time").textContent = formatDateTime(item.createdAt);
     node.querySelector(".item-title").textContent = item.title;
     node.querySelector(".item-preview").textContent = item.kind === "file"
       ? `${item.mime || "未知类型"} · ${bytesToLabel(item.size)}`
       : item.text.slice(0, 220);
+
+    const context = contextLine(item);
+    const contextNode = node.querySelector(".item-context");
+    contextNode.textContent = context || "暂无来源上下文";
+
+    const advice = adviceForItem(item);
+    const adviceWrap = node.querySelector(".item-advice");
+    const adviceNode = document.createElement("span");
+    adviceNode.className = `advice-pill ${advice.type}`;
+    adviceNode.textContent = `${advice.label} · ${advice.reason}`;
+    adviceWrap.append(adviceNode);
 
     if (item.kind === "file" && item.mime?.startsWith("image/") && item.blob) {
       const image = document.createElement("img");
@@ -233,6 +541,17 @@ function renderItems() {
       tags.append(tagNode);
     }
 
+    const quickTags = node.querySelector(".quick-tags");
+    for (const tag of ["稍后看", "要发送", "素材", "待处理", "不重要"]) {
+      const button = document.createElement("button");
+      button.className = "quick-tag";
+      button.type = "button";
+      button.textContent = tag;
+      button.classList.toggle("is-active", (item.tags || []).includes(tag));
+      button.addEventListener("click", () => addQuickTag(item, tag));
+      quickTags.append(button);
+    }
+
     const copyButton = node.querySelector(".copy-action");
     copyButton.disabled = item.kind !== "text";
     copyButton.addEventListener("click", () => copyItem(item));
@@ -244,8 +563,11 @@ function renderItems() {
     stashButton.textContent = item.status === "stashed" ? "取消暂存" : "暂存";
     stashButton.addEventListener("click", () => toggleStash(item));
 
-    node.querySelector(".delete-action").addEventListener("click", () => removeItem(item));
-    els.itemsList.append(node);
+    node.querySelector(".delete-action").addEventListener("click", () => removeItem(item, node));
+    group.append(node);
+    }
+
+    els.itemsList.append(group);
   }
 
   setViewCopy();
@@ -254,6 +576,9 @@ function renderItems() {
 
 async function refresh() {
   state.items = await getAllItems();
+  if (await removeDuplicateTextItems(state.items)) {
+    state.items = await getAllItems();
+  }
   state.companionIds = new Set(state.items.map((item) => item.id));
   renderItems();
 }
@@ -266,6 +591,7 @@ async function saveText() {
   }
 
   const title = text.split(/\r?\n/).find(Boolean)?.slice(0, 80) || "文本片段";
+  const urlMetadata = await getUrlMetadata(text);
   await putItem({
     id: makeId(),
     kind: "text",
@@ -274,7 +600,8 @@ async function saveText() {
     tags: tagsFromInput(),
     status: "active",
     day: todayKey(),
-    createdAt: Date.now()
+    createdAt: Date.now(),
+    ...(urlMetadata || {})
   });
 
   els.textInput.value = "";
@@ -370,6 +697,14 @@ function exportVisible() {
     mime: item.mime,
     size: item.size,
     tags: item.tags,
+    sourceApp: item.sourceApp,
+    sourceWindow: item.sourceWindow,
+    sourceTitle: item.sourceTitle,
+    sourceUrl: item.sourceUrl,
+    urlTitle: item.urlTitle,
+    urlHost: item.urlHost,
+    urlKind: item.urlKind,
+    urlTime: item.urlTime,
     status: item.status,
     createdAt: new Date(item.createdAt).toISOString()
   }));
@@ -400,6 +735,12 @@ async function importCompanionItems() {
     els.companionStatus.textContent = "系统剪贴板已连接";
     els.companionStatus.classList.add("is-connected");
     const incoming = Array.isArray(data.items) ? data.items : [];
+    const existingTextKeys = new Set(
+      state.items
+        .filter((existingItem) => existingItem.kind === "text")
+        .map((existingItem) => textNearDuplicateKey(existingItem.text))
+        .filter(Boolean)
+    );
     let changed = false;
 
     for (const item of incoming) {
@@ -418,17 +759,30 @@ async function importCompanionItems() {
           size: item.size || blob.size,
           blob,
           tags: item.tags || ["系统剪贴板"],
+          sourceApp: item.sourceApp || "",
+          sourceWindow: item.sourceWindow || "",
           status: "active",
           day: todayKey(new Date(item.createdAt || Date.now())),
           createdAt: item.createdAt || Date.now()
         });
       } else if (item.type === "text" && item.text) {
+        const key = textNearDuplicateKey(item.text);
+        if (existingTextKeys.has(key)) {
+          state.companionIds.add(item.id);
+          continue;
+        }
+
+        const urlMetadata = await getUrlMetadata(item.text);
+
         await putItem({
           id: item.id,
           kind: "text",
           title: (item.title || item.text.split(/\r?\n/).find(Boolean) || "系统复制内容").slice(0, 80),
           text: item.text,
           tags: item.tags || ["系统剪贴板"],
+          sourceApp: item.sourceApp || "",
+          sourceWindow: item.sourceWindow || "",
+          ...(urlMetadata || {}),
           status: "active",
           day: todayKey(new Date(item.createdAt || Date.now())),
           createdAt: item.createdAt || Date.now()
@@ -438,6 +792,9 @@ async function importCompanionItems() {
       }
 
       state.companionIds.add(item.id);
+      if (item.type === "text") {
+        existingTextKeys.add(textNearDuplicateKey(item.text));
+      }
       changed = true;
     }
 
@@ -460,14 +817,91 @@ async function toggleStash(item) {
   await refresh();
 }
 
-async function removeItem(item) {
-  const confirmed = confirm(`永久删除「${item.title}」？`);
+async function addQuickTag(item, tag) {
+  const tags = uniqueTags([...(item.tags || []), tag]);
+  await putItem({ ...item, tags });
+  showToast(`已标记：${tag}`);
+  await refresh();
+}
+
+function wait(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function confirmDelete(item) {
+  return new Promise((resolve) => {
+    els.confirmText.textContent = `「${item.title}」将从临泊站清出。`;
+    els.confirmModal.hidden = false;
+
+    const cleanup = (answer) => {
+      els.confirmModal.hidden = true;
+      els.cancelDeleteButton.removeEventListener("click", onCancel);
+      els.confirmDeleteButton.removeEventListener("click", onConfirm);
+      resolve(answer);
+    };
+
+    const onCancel = () => cleanup(false);
+    const onConfirm = () => cleanup(true);
+
+    els.cancelDeleteButton.addEventListener("click", onCancel);
+    els.confirmDeleteButton.addEventListener("click", onConfirm);
+  });
+}
+
+function playDeleteSound() {
+  try {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    const context = new AudioContext();
+    const oscillator = context.createOscillator();
+    const gain = context.createGain();
+
+    oscillator.type = "sine";
+    oscillator.frequency.setValueAtTime(520, context.currentTime);
+    oscillator.frequency.exponentialRampToValueAtTime(220, context.currentTime + 0.12);
+    gain.gain.setValueAtTime(0.001, context.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.08, context.currentTime + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.001, context.currentTime + 0.18);
+
+    oscillator.connect(gain);
+    gain.connect(context.destination);
+    oscillator.start();
+    oscillator.stop(context.currentTime + 0.2);
+  } catch {
+    // Audio feedback is optional.
+  }
+}
+
+function burstConfetti(originNode) {
+  const rect = originNode.getBoundingClientRect();
+  const colors = ["#19c8b1", "#f4fffb", "#d5ad47", "#2f73d8"];
+
+  for (let index = 0; index < 18; index += 1) {
+    const piece = document.createElement("span");
+    piece.className = "confetti";
+    piece.style.left = `${rect.right - 50 + Math.random() * 90}px`;
+    piece.style.top = `${rect.top + 20 + Math.random() * 42}px`;
+    piece.style.background = colors[index % colors.length];
+    piece.style.animationDelay = `${Math.random() * 80}ms`;
+    els.celebrationLayer.append(piece);
+    window.setTimeout(() => piece.remove(), 900);
+  }
+}
+
+async function removeItem(item, node) {
+  const confirmed = await confirmDelete(item);
   if (!confirmed) return;
+
+  playDeleteSound();
+  if (node) {
+    burstConfetti(node);
+    node.classList.add("is-removing");
+    await wait(420);
+  }
 
   rememberDeletedCompanionId(item.id);
   await deleteItem(item.id);
   state.companionIds.delete(item.id);
-  showToast("已删除");
+  showToast("已清出车位");
   await refresh();
 }
 

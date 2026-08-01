@@ -63,6 +63,38 @@ function makeId() {
   return `${Date.now()}-${crypto.randomUUID()}`;
 }
 
+function normalizeText(text) {
+  return text.trim().replace(/\s+/g, " ");
+}
+
+function stableHash(value) {
+  let hash = 2166136261;
+
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+
+  return (hash >>> 0).toString(16).padStart(8, "0");
+}
+
+async function isCompanionOnline() {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 350);
+
+  try {
+    const response = await fetch("http://127.0.0.1:18765/", {
+      cache: "no-store",
+      signal: controller.signal
+    });
+    return response.ok;
+  } catch {
+    return false;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 function todayKey(date = new Date()) {
   return date.toISOString().slice(0, 10);
 }
@@ -95,10 +127,17 @@ async function injectContentScriptIntoOpenTabs() {
 }
 
 async function saveCopiedText(payload) {
+  if (await isCompanionOnline()) {
+    return;
+  }
+
+  const normalizedText = normalizeText(payload.text);
+  if (!normalizedText) return;
+
   const title = payload.text.split(/\r?\n/).find(Boolean)?.slice(0, 80) || "网页复制内容";
 
   await putItem({
-    id: makeId(),
+    id: `web-text-${stableHash(normalizedText)}`,
     kind: "text",
     title,
     text: payload.text,

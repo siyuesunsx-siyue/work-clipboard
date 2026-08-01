@@ -1,6 +1,7 @@
 clipboard-watch.log
 clipboard-watch.pid
 dist/
+icon-options/
 *.zip
 *.crx
 Thumbs.db

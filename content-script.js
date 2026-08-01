@@ -39,10 +39,10 @@ function initWorkClipboardCapture() {
   function sendCopiedText(text, html = "") {
     const cleanText = text.trim();
 
-    if (!cleanText) return;
+    if (!cleanText) return false;
 
     const signature = `${location.href}\n${cleanText}`;
-    if (signature === lastCopySignature) return;
+    if (signature === lastCopySignature) return false;
     lastCopySignature = signature;
 
     chrome.runtime.sendMessage({
@@ -54,6 +54,8 @@ function initWorkClipboardCapture() {
         pageUrl: location.href
       }
     }).catch(() => {});
+
+    return true;
   }
 
   async function readClipboardTextSoon() {
@@ -69,8 +71,10 @@ function initWorkClipboardCapture() {
 
   document.addEventListener("copy", () => {
     const text = selectedText();
-    sendCopiedText(text, selectedHtml());
-    readClipboardTextSoon();
+    const sentSelection = sendCopiedText(text, selectedHtml());
+    if (!sentSelection) {
+      readClipboardTextSoon();
+    }
   }, true);
 
   document.addEventListener("keyup", (event) => {
