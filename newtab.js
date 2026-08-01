@@ -404,7 +404,7 @@ function adviceForItem(item) {
   }
 
   if (item.kind === "file" && item.mime?.startsWith("image/")) {
-    return { label: "建议暂存", type: "stash", reason: "截图通常需要回看来源" };
+    return null;
   }
 
   if (urlInfo || fileInfo) {
@@ -511,12 +511,16 @@ function renderItems() {
     const contextNode = node.querySelector(".item-context");
     contextNode.textContent = context || "暂无来源上下文";
 
-    const advice = adviceForItem(item);
     const adviceWrap = node.querySelector(".item-advice");
-    const adviceNode = document.createElement("span");
-    adviceNode.className = `advice-pill ${advice.type}`;
-    adviceNode.textContent = `${advice.label} · ${advice.reason}`;
-    adviceWrap.append(adviceNode);
+    const advice = state.filter === "cleanup" ? adviceForItem(item) : null;
+    if (advice) {
+      const adviceNode = document.createElement("span");
+      adviceNode.className = `advice-pill ${advice.type}`;
+      adviceNode.textContent = `${advice.label} · ${advice.reason}`;
+      adviceWrap.append(adviceNode);
+    } else {
+      adviceWrap.hidden = true;
+    }
 
     if (item.kind === "file" && item.mime?.startsWith("image/") && item.blob) {
       const image = document.createElement("img");
