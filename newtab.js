@@ -873,17 +873,33 @@ function playDeleteSound() {
 
 function burstConfetti(originNode) {
   const rect = originNode.getBoundingClientRect();
-  const colors = ["#19c8b1", "#f4fffb", "#d5ad47", "#2f73d8"];
+  const colors = ["#19c8b1", "#f4fffb", "#d5ad47", "#8feee2", "#2f73d8", "#12332d"];
+  const centerX = rect.left + rect.width * 0.72;
+  const centerY = rect.top + Math.min(rect.height * 0.45, 120);
 
-  for (let index = 0; index < 18; index += 1) {
+  for (let index = 0; index < 56; index += 1) {
     const piece = document.createElement("span");
     piece.className = "confetti";
-    piece.style.left = `${rect.right - 50 + Math.random() * 90}px`;
-    piece.style.top = `${rect.top + 20 + Math.random() * 42}px`;
+    const angle = -145 + Math.random() * 110;
+    const distance = 90 + Math.random() * 260;
+    const drift = -90 + Math.random() * 180;
+    const x = Math.cos((angle * Math.PI) / 180) * distance;
+    const y = Math.sin((angle * Math.PI) / 180) * distance + 190 + Math.random() * 120;
+    const width = 5 + Math.random() * 5;
+    const height = 7 + Math.random() * 8;
+
+    piece.style.left = `${centerX + drift * 0.22}px`;
+    piece.style.top = `${centerY}px`;
+    piece.style.width = `${width}px`;
+    piece.style.height = `${height}px`;
+    piece.style.setProperty("--dx", `${x + drift}px`);
+    piece.style.setProperty("--dy", `${y}px`);
+    piece.style.setProperty("--spin", `${180 + Math.random() * 620}deg`);
     piece.style.background = colors[index % colors.length];
-    piece.style.animationDelay = `${Math.random() * 80}ms`;
+    piece.style.animationDelay = `${Math.random() * 160}ms`;
+    piece.style.animationDuration = `${1250 + Math.random() * 550}ms`;
     els.celebrationLayer.append(piece);
-    window.setTimeout(() => piece.remove(), 900);
+    window.setTimeout(() => piece.remove(), 2100);
   }
 }
 
