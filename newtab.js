@@ -451,7 +451,7 @@ function getVisibleItems() {
 
 function setViewCopy() {
   const copy = {
-    active: ["今日临泊内容", "每条内容会尽量显示来源和处理建议。"],
+    active: ["今日临泊内容", ""],
     stashed: ["已暂存车位", "这些内容不会被下班清场误删。"],
     all: ["全部临泊记录", "包含今天、历史和暂存的所有项目。"],
     cleanup: ["下班清场队列", "根据上下文判断删除、暂存，或保存到本地。"]
@@ -459,6 +459,7 @@ function setViewCopy() {
 
   els.viewTitle.textContent = copy[0];
   els.viewHint.textContent = copy[1];
+  els.viewHint.hidden = !copy[1];
 }
 
 function renderStats() {
@@ -856,20 +857,31 @@ function playDeleteSound() {
   try {
     const AudioContext = window.AudioContext || window.webkitAudioContext;
     const context = new AudioContext();
-    const oscillator = context.createOscillator();
-    const gain = context.createGain();
+    const notes = [
+      [784, 0, 0.12, 0.045],
+      [1047, 0.045, 0.13, 0.045],
+      [1319, 0.095, 0.15, 0.04],
+      [1568, 0.16, 0.11, 0.025]
+    ];
 
-    oscillator.type = "sine";
-    oscillator.frequency.setValueAtTime(520, context.currentTime);
-    oscillator.frequency.exponentialRampToValueAtTime(220, context.currentTime + 0.12);
-    gain.gain.setValueAtTime(0.001, context.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.08, context.currentTime + 0.02);
-    gain.gain.exponentialRampToValueAtTime(0.001, context.currentTime + 0.18);
+    notes.forEach(([frequency, offset, duration, volume]) => {
+      const oscillator = context.createOscillator();
+      const gain = context.createGain();
+      const start = context.currentTime + offset;
+      const end = start + duration;
 
-    oscillator.connect(gain);
-    gain.connect(context.destination);
-    oscillator.start();
-    oscillator.stop(context.currentTime + 0.2);
+      oscillator.type = "sine";
+      oscillator.frequency.setValueAtTime(frequency, start);
+      oscillator.frequency.exponentialRampToValueAtTime(frequency * 0.92, end);
+      gain.gain.setValueAtTime(0.001, start);
+      gain.gain.exponentialRampToValueAtTime(volume, start + 0.014);
+      gain.gain.exponentialRampToValueAtTime(0.001, end);
+
+      oscillator.connect(gain);
+      gain.connect(context.destination);
+      oscillator.start(start);
+      oscillator.stop(end + 0.02);
+    });
   } catch {
     // Audio feedback is optional.
   }
