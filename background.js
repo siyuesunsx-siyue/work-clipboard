@@ -64,7 +64,7 @@ function makeId() {
 }
 
 function normalizeText(text) {
-  return text.trim().replace(/\s+/g, " ");
+  return String(text || "").trim().replace(/\s+/g, " ");
 }
 
 function stableHash(value) {
@@ -127,6 +127,8 @@ async function injectContentScriptIntoOpenTabs() {
 }
 
 async function saveCopiedText(payload) {
+  if (!payload?.text) return;
+
   if (await isCompanionOnline()) {
     return;
   }
