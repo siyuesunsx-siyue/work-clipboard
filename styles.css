@@ -290,6 +290,50 @@ textarea {
   line-height: 1.15;
 }
 
+.limit-reminder {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin: -2px 0 16px;
+  border: 1px solid rgba(25, 200, 177, 0.36);
+  border-radius: 16px;
+  background:
+    linear-gradient(135deg, rgba(25, 200, 177, 0.18), rgba(213, 173, 71, 0.12)),
+    rgba(246, 251, 248, 0.96);
+  box-shadow: 0 18px 42px rgba(4, 26, 22, 0.18);
+  padding: 14px 16px;
+}
+
+.limit-reminder[hidden] {
+  display: none;
+}
+
+.limit-reminder strong {
+  display: block;
+  color: var(--accent-dark);
+  font-size: 16px;
+}
+
+.limit-reminder p {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.limit-reminder-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.limit-reminder-actions button:first-child {
+  background: var(--accent-dark);
+  border-color: var(--accent-dark);
+  color: #fff;
+  font-weight: 700;
+}
+
 .items,
 .session-group {
   display: grid;
@@ -589,6 +633,7 @@ textarea {
   .toolbar,
   .capture-actions,
   .list-head,
+  .limit-reminder,
   .item {
     align-items: stretch;
     flex-direction: column;
@@ -596,6 +641,7 @@ textarea {
   }
 
   .toolbar-actions,
+  .limit-reminder-actions,
   .item-actions,
   .modal-actions {
     display: grid;

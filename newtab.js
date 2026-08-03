@@ -2,6 +2,8 @@ const DB_NAME = "work-clipboard-db";
 const DB_VERSION = 1;
 const STORE = "items";
 const DELETED_IDS_KEY = "work-clipboard-deleted-companion-ids";
+const LIMIT_REMINDER_KEY = "parkit-limit-reminder-dismissed-count";
+const ITEM_LIMIT = 20;
 
 const state = {
   items: [],
@@ -30,6 +32,10 @@ const els = {
   exportVisibleButton: document.querySelector("#exportVisibleButton"),
   viewTitle: document.querySelector("#viewTitle"),
   viewHint: document.querySelector("#viewHint"),
+  limitReminder: document.querySelector("#limitReminder"),
+  limitReminderText: document.querySelector("#limitReminderText"),
+  limitCleanupButton: document.querySelector("#limitCleanupButton"),
+  limitDismissButton: document.querySelector("#limitDismissButton"),
   itemsList: document.querySelector("#itemsList"),
   template: document.querySelector("#itemTemplate"),
   toast: document.querySelector("#toast"),
@@ -107,6 +113,14 @@ function rememberDeletedCompanionId(id) {
 
   state.deletedCompanionIds.add(id);
   localStorage.setItem(DELETED_IDS_KEY, JSON.stringify([...state.deletedCompanionIds].slice(-1000)));
+}
+
+function dismissedLimitCount() {
+  return Number(localStorage.getItem(LIMIT_REMINDER_KEY) || 0);
+}
+
+function pendingItemCount() {
+  return state.items.filter((item) => item.status === "active").length;
 }
 
 function makeId() {
@@ -462,10 +476,27 @@ function setViewCopy() {
   els.viewHint.hidden = !copy[1];
 }
 
+function setFilter(filter) {
+  state.filter = filter;
+  els.filters.forEach((node) => node.classList.toggle("is-active", node.dataset.filter === filter));
+  renderItems();
+}
+
+function renderLimitReminder() {
+  const count = pendingItemCount();
+  const shouldShow = count > ITEM_LIMIT && dismissedLimitCount() < count;
+
+  els.limitReminder.hidden = !shouldShow;
+  if (!shouldShow) return;
+
+  els.limitReminderText.textContent = `现在有 ${count} 条待处理内容，建议清理到 ${ITEM_LIMIT} 条以内。`;
+}
+
 function renderStats() {
   els.totalCount.textContent = state.items.length;
   els.fileCount.textContent = state.items.filter((item) => item.kind === "file").length;
   els.stashCount.textContent = state.items.filter((item) => item.status === "stashed").length;
+  renderLimitReminder();
 }
 
 function renderItems() {
@@ -962,16 +993,21 @@ function bindEvents() {
 
   els.filters.forEach((button) => {
     button.addEventListener("click", () => {
-      state.filter = button.dataset.filter;
-      els.filters.forEach((node) => node.classList.toggle("is-active", node === button));
-      renderItems();
+      setFilter(button.dataset.filter);
     });
   });
 
   els.cleanupButton.addEventListener("click", () => {
-    state.filter = "cleanup";
-    els.filters.forEach((node) => node.classList.toggle("is-active", node.dataset.filter === "cleanup"));
-    renderItems();
+    setFilter("cleanup");
+  });
+
+  els.limitCleanupButton.addEventListener("click", () => {
+    setFilter("cleanup");
+  });
+
+  els.limitDismissButton.addEventListener("click", () => {
+    localStorage.setItem(LIMIT_REMINDER_KEY, String(pendingItemCount()));
+    renderLimitReminder();
   });
 
   els.searchInput.addEventListener("input", () => {

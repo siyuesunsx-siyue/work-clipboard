@@ -72,6 +72,17 @@
           <button id="exportVisibleButton" type="button">导出当前列表</button>
         </section>
 
+        <section id="limitReminder" class="limit-reminder" hidden>
+          <div>
+            <strong id="limitReminderTitle">Parkit 车位快满了</strong>
+            <p id="limitReminderText"></p>
+          </div>
+          <div class="limit-reminder-actions">
+            <button id="limitCleanupButton" type="button">去清场</button>
+            <button id="limitDismissButton" type="button">稍后提醒</button>
+          </div>
+        </section>
+
         <section id="itemsList" class="items" aria-live="polite"></section>
       </section>
     </main>
