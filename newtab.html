@@ -90,6 +90,7 @@
           </label>
           <div class="bulk-actions">
             <button id="bulkDownloadButton" type="button">一键保存</button>
+            <button id="bulkStashButton" type="button">一键暂存</button>
             <button id="bulkDeleteButton" class="danger" type="button">一键删除</button>
             <button id="bulkClearButton" type="button">取消选择</button>
           </div>
@@ -102,8 +103,7 @@
     <template id="itemTemplate">
       <article class="item">
         <label class="item-select">
-          <input class="select-action" type="checkbox">
-          <span>选择</span>
+          <input class="select-action" type="checkbox" aria-label="选择这条内容">
         </label>
         <div class="item-main">
           <div class="item-topline">
@@ -115,13 +115,6 @@
           <p class="item-context"></p>
           <div class="item-advice"></div>
           <div class="item-tags"></div>
-          <div class="quick-tags" aria-label="快速用途标签"></div>
-        </div>
-        <div class="item-actions">
-          <button class="copy-action" type="button">复制</button>
-          <button class="download-action" type="button">保存到本地</button>
-          <button class="stash-action" type="button">暂存</button>
-          <button class="delete-action danger" type="button">删除</button>
         </div>
       </article>
     </template>

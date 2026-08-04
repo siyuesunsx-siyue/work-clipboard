@@ -41,6 +41,7 @@ const els = {
   selectAllVisible: document.querySelector("#selectAllVisible"),
   bulkCountText: document.querySelector("#bulkCountText"),
   bulkDownloadButton: document.querySelector("#bulkDownloadButton"),
+  bulkStashButton: document.querySelector("#bulkStashButton"),
   bulkDeleteButton: document.querySelector("#bulkDeleteButton"),
   bulkClearButton: document.querySelector("#bulkClearButton"),
   itemsList: document.querySelector("#itemsList"),
@@ -246,10 +247,6 @@ function tagsFromInput() {
     .split(/[,，\s]+/)
     .map((tag) => tag.trim())
     .filter(Boolean);
-}
-
-function uniqueTags(tags) {
-  return [...new Set((tags || []).map((tag) => String(tag).trim()).filter(Boolean))];
 }
 
 function formatDateTime(value) {
@@ -609,6 +606,11 @@ function renderItems() {
         renderBulkBar();
         node.classList.toggle("is-selected", selectInput.checked);
       });
+      node.addEventListener("click", (event) => {
+        if (event.target.closest("input, button")) return;
+        selectInput.checked = !selectInput.checked;
+        selectInput.dispatchEvent(new Event("change"));
+      });
 
       node.querySelector(".item-kind").textContent = item.kind === "file" ? "文件" : "文本";
       node.querySelector(".item-time").textContent = formatDateTime(item.createdAt);
@@ -648,36 +650,12 @@ function renderItems() {
         tags.append(sourceTag);
       }
 
-      for (const tag of item.tags || []) {
+      for (const tag of (item.tags || []).slice(0, 2)) {
         const tagNode = document.createElement("span");
         tagNode.className = "tag";
         tagNode.textContent = tag;
         tags.append(tagNode);
       }
-
-      const quickTags = node.querySelector(".quick-tags");
-      for (const tag of ["稍后看", "要发送", "素材", "待处理", "不重要"]) {
-        const button = document.createElement("button");
-        button.className = "quick-tag";
-        button.type = "button";
-        button.textContent = tag;
-        button.classList.toggle("is-active", (item.tags || []).includes(tag));
-        button.addEventListener("click", () => addQuickTag(item, tag));
-        quickTags.append(button);
-      }
-
-      const copyButton = node.querySelector(".copy-action");
-      copyButton.disabled = item.kind !== "text";
-      copyButton.addEventListener("click", () => copyItem(item));
-
-      const downloadButton = node.querySelector(".download-action");
-      downloadButton.addEventListener("click", () => downloadItem(item));
-
-      const stashButton = node.querySelector(".stash-action");
-      stashButton.textContent = item.status === "stashed" ? "取消暂存" : "暂存";
-      stashButton.addEventListener("click", () => toggleStash(item));
-
-      node.querySelector(".delete-action").addEventListener("click", () => removeItem(item, node));
       group.append(node);
     }
 
@@ -788,11 +766,6 @@ async function readClipboard() {
   }
 }
 
-async function copyItem(item) {
-  await navigator.clipboard.writeText(item.text);
-  showToast("已复制");
-}
-
 function downloadBlob(blob, fileName) {
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
@@ -824,6 +797,23 @@ async function downloadSelectedItems() {
   }
 
   showToast(`已开始保存 ${items.length} 条内容`);
+}
+
+async function stashSelectedItems() {
+  const items = selectedVisibleItems();
+  if (!items.length) return;
+
+  for (const item of items) {
+    await putItem({
+      ...item,
+      status: "stashed"
+    });
+    state.selectedIds.delete(item.id);
+  }
+
+  showToast(`已暂存 ${items.length} 条内容`);
+  await refresh();
+  signalItemsChanged();
 }
 
 function exportVisible() {
@@ -954,23 +944,6 @@ async function importCompanionItems() {
     els.companionStatus.classList.remove("is-connected");
     // The companion is optional. When it is not running, the extension still works for manual capture.
   }
-}
-
-async function toggleStash(item) {
-  await putItem({
-    ...item,
-    status: item.status === "stashed" ? "active" : "stashed"
-  });
-  showToast(item.status === "stashed" ? "已取消暂存" : "已暂存");
-  await refresh();
-  signalItemsChanged();
-}
-
-async function addQuickTag(item, tag) {
-  const tags = uniqueTags([...(item.tags || []), tag]);
-  await putItem({ ...item, tags });
-  showToast(`已标记：${tag}`);
-  await refresh();
 }
 
 function wait(ms) {
@@ -1182,6 +1155,7 @@ function bindEvents() {
   });
 
   els.bulkDownloadButton.addEventListener("click", downloadSelectedItems);
+  els.bulkStashButton.addEventListener("click", stashSelectedItems);
   els.bulkDeleteButton.addEventListener("click", removeSelectedItems);
   els.bulkClearButton.addEventListener("click", () => {
     state.selectedIds.clear();

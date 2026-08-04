@@ -341,8 +341,8 @@ textarea {
 }
 
 .session-group {
-  grid-template-columns: repeat(3, minmax(220px, 1fr));
-  margin-bottom: 22px;
+  grid-template-columns: repeat(3, minmax(210px, 1fr));
+  margin-bottom: 18px;
 }
 
 .session-title {
@@ -394,9 +394,15 @@ textarea {
   justify-content: flex-end;
 }
 
+.bulk-actions button {
+  min-height: 34px;
+  padding: 0 11px;
+  font-size: 13px;
+}
+
 .item {
   display: flex;
-  min-height: 360px;
+  min-height: 238px;
   flex-direction: column;
   position: relative;
   overflow: hidden;
@@ -404,7 +410,8 @@ textarea {
   border-radius: 16px;
   background: var(--card);
   box-shadow: var(--card-shadow);
-  padding: 42px 14px 14px;
+  cursor: pointer;
+  padding: 14px;
 }
 
 .item.is-selected {
@@ -424,18 +431,17 @@ textarea {
 
 .item-select {
   position: absolute;
-  top: 12px;
-  right: 12px;
+  top: 10px;
+  right: 10px;
   z-index: 2;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  border: 1px solid rgba(25, 200, 177, 0.24);
-  border-radius: 999px;
-  background: rgba(246, 251, 248, 0.92);
-  color: var(--muted);
-  font-size: 12px;
-  padding: 4px 8px;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid rgba(25, 200, 177, 0.28);
+  border-radius: 8px;
+  background: rgba(246, 251, 248, 0.94);
 }
 
 .item-main {
@@ -467,6 +473,7 @@ textarea {
 
 .item-title {
   margin-top: 8px;
+  padding-right: 32px;
   font-size: 16px;
   line-height: 1.35;
   overflow-wrap: anywhere;
@@ -478,10 +485,10 @@ textarea {
 
 .item-preview,
 .item-context {
-  margin-top: 7px;
+  margin-top: 6px;
   color: var(--muted);
-  font-size: 13px;
-  line-height: 1.5;
+  font-size: 12px;
+  line-height: 1.45;
   overflow-wrap: anywhere;
   display: -webkit-box;
   -webkit-box-orient: vertical;
@@ -489,11 +496,11 @@ textarea {
 }
 
 .item-preview {
-  -webkit-line-clamp: 3;
+  -webkit-line-clamp: 2;
 }
 
 .item-context {
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 1;
 }
 
 .item-context {
@@ -525,20 +532,19 @@ textarea {
 .item-media {
   display: block;
   width: 100%;
-  height: 150px;
+  height: 104px;
   object-fit: contain;
-  margin-top: 12px;
+  margin-top: 10px;
   border: 1px solid var(--line);
   border-radius: 14px;
   background: #fff;
 }
 
-.item-tags,
-.quick-tags {
+.item-tags {
   display: flex;
   flex-wrap: wrap;
   gap: 7px;
-  margin-top: 10px;
+  margin-top: 9px;
 }
 
 .tag {
@@ -548,34 +554,6 @@ textarea {
   background: rgba(25, 200, 177, 0.09);
   padding: 3px 9px;
   font-size: 12px;
-}
-
-.quick-tag {
-  min-height: 30px;
-  padding: 0 10px;
-  border-radius: 999px;
-  color: #38564f;
-  background: var(--card-soft);
-  font-size: 12px;
-}
-
-.quick-tag.is-active {
-  background: var(--accent-dark);
-  border-color: var(--accent-dark);
-  color: #fff;
-}
-
-.item-actions {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-  margin-top: 14px;
-}
-
-.item-actions button {
-  min-height: 34px;
-  padding: 0 8px;
-  font-size: 13px;
 }
 
 .danger {
@@ -732,7 +710,6 @@ textarea {
   .toolbar-actions,
   .limit-reminder-actions,
   .bulk-actions,
-  .item-actions,
   .modal-actions {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
