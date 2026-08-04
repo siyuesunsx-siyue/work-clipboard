@@ -9,6 +9,7 @@ const state = {
   items: [],
   filter: "active",
   query: "",
+  selectedIds: new Set(),
   companionIds: new Set(),
   deletedCompanionIds: loadDeletedCompanionIds()
 };
@@ -36,6 +37,12 @@ const els = {
   limitReminderText: document.querySelector("#limitReminderText"),
   limitCleanupButton: document.querySelector("#limitCleanupButton"),
   limitDismissButton: document.querySelector("#limitDismissButton"),
+  bulkBar: document.querySelector("#bulkBar"),
+  selectAllVisible: document.querySelector("#selectAllVisible"),
+  bulkCountText: document.querySelector("#bulkCountText"),
+  bulkDownloadButton: document.querySelector("#bulkDownloadButton"),
+  bulkDeleteButton: document.querySelector("#bulkDeleteButton"),
+  bulkClearButton: document.querySelector("#bulkClearButton"),
   itemsList: document.querySelector("#itemsList"),
   template: document.querySelector("#itemTemplate"),
   toast: document.querySelector("#toast"),
@@ -191,6 +198,36 @@ async function removeDuplicateTextItems(items) {
       duplicateIds.push(item.id);
       rememberDeletedCompanionId(item.id);
     }
+  }
+
+  for (const id of duplicateIds) {
+    await deleteItem(id);
+  }
+
+  return duplicateIds.length > 0;
+}
+
+function isFilePathTextItem(item) {
+  return item.kind === "text" && filePathInfo(item.text);
+}
+
+function sameSourceMoment(a, b, windowMs = 5000) {
+  const sameSource = (a.sourceWindow && a.sourceWindow === b.sourceWindow)
+    || (a.sourceApp && a.sourceApp === b.sourceApp);
+  return Boolean(sameSource && Math.abs((a.createdAt || 0) - (b.createdAt || 0)) <= windowMs);
+}
+
+async function removePathItemsCoveredByImages(items) {
+  const images = items.filter((item) => item.kind === "file" && item.mime?.startsWith("image/"));
+  if (!images.length) return false;
+
+  const duplicateIds = [];
+  for (const item of items) {
+    if (!isFilePathTextItem(item)) continue;
+    if (!images.some((image) => sameSourceMoment(item, image))) continue;
+
+    duplicateIds.push(item.id);
+    rememberDeletedCompanionId(item.id);
   }
 
   for (const id of duplicateIds) {
@@ -401,7 +438,6 @@ function contextLine(item) {
   if (fileInfo) {
     parts.push(`${fileInfo.type}：${fileInfo.fileName}`);
     if (fileInfo.count > 1) parts.push(`${fileInfo.count} 个路径`);
-    if (fileInfo.folder) parts.push(`目录：${fileInfo.folder}`);
   }
 
   if (item.sourceApp) {
@@ -510,6 +546,22 @@ function renderStats() {
   renderLimitReminder();
 }
 
+function selectedVisibleItems() {
+  const visibleIds = new Set(getVisibleItems().map((item) => item.id));
+  return state.items.filter((item) => visibleIds.has(item.id) && state.selectedIds.has(item.id));
+}
+
+function renderBulkBar() {
+  const visibleItems = getVisibleItems();
+  const visibleIds = new Set(visibleItems.map((item) => item.id));
+  const selectedCount = [...state.selectedIds].filter((id) => visibleIds.has(id)).length;
+
+  els.bulkBar.hidden = selectedCount === 0;
+  els.bulkCountText.textContent = selectedCount ? `已选择 ${selectedCount} 条` : "选择当前列表";
+  els.selectAllVisible.checked = Boolean(visibleItems.length && selectedCount === visibleItems.length);
+  els.selectAllVisible.indeterminate = selectedCount > 0 && selectedCount < visibleItems.length;
+}
+
 function renderItems() {
   const visibleItems = getVisibleItems();
   els.itemsList.replaceChildren();
@@ -521,6 +573,7 @@ function renderItems() {
     els.itemsList.append(empty);
     setViewCopy();
     renderStats();
+    renderBulkBar();
     return;
   }
 
@@ -541,77 +594,91 @@ function renderItems() {
     group.append(title);
 
     for (const item of groupItems) {
-    const node = els.template.content.firstElementChild.cloneNode(true);
-    node.dataset.itemId = item.id;
-    node.querySelector(".item-kind").textContent = item.kind === "file" ? "文件" : "文本";
-    node.querySelector(".item-time").textContent = formatDateTime(item.createdAt);
-    node.querySelector(".item-title").textContent = item.title;
-    node.querySelector(".item-preview").textContent = item.kind === "file"
-      ? `${item.mime || "未知类型"} · ${bytesToLabel(item.size)}`
-      : item.text.slice(0, 220);
+      const node = els.template.content.firstElementChild.cloneNode(true);
+      node.dataset.itemId = item.id;
+      node.classList.toggle("is-selected", state.selectedIds.has(item.id));
 
-    const context = contextLine(item);
-    const contextNode = node.querySelector(".item-context");
-    contextNode.textContent = context || "暂无来源上下文";
+      const selectInput = node.querySelector(".select-action");
+      selectInput.checked = state.selectedIds.has(item.id);
+      selectInput.addEventListener("change", () => {
+        if (selectInput.checked) {
+          state.selectedIds.add(item.id);
+        } else {
+          state.selectedIds.delete(item.id);
+        }
+        renderBulkBar();
+        node.classList.toggle("is-selected", selectInput.checked);
+      });
 
-    const adviceWrap = node.querySelector(".item-advice");
-    const advice = state.filter === "cleanup" ? adviceForItem(item) : null;
-    if (advice) {
-      const adviceNode = document.createElement("span");
-      adviceNode.className = `advice-pill ${advice.type}`;
-      adviceNode.textContent = `${advice.label} · ${advice.reason}`;
-      adviceWrap.append(adviceNode);
-    } else {
-      adviceWrap.hidden = true;
-    }
+      node.querySelector(".item-kind").textContent = item.kind === "file" ? "文件" : "文本";
+      node.querySelector(".item-time").textContent = formatDateTime(item.createdAt);
+      node.querySelector(".item-title").textContent = item.title;
+      node.querySelector(".item-preview").textContent = item.kind === "file"
+        ? `${item.mime || "未知类型"} · ${bytesToLabel(item.size)}`
+        : item.text.slice(0, 140);
 
-    if (item.kind === "file" && item.mime?.startsWith("image/") && item.blob) {
-      const image = document.createElement("img");
-      image.className = "item-media";
-      image.src = URL.createObjectURL(item.blob);
-      image.alt = item.title;
-      node.querySelector(".item-main").append(image);
-    }
+      const context = contextLine(item);
+      const contextNode = node.querySelector(".item-context");
+      contextNode.textContent = context || "暂无来源上下文";
 
-    const tags = node.querySelector(".item-tags");
-    if (item.sourceUrl) {
-      const sourceTag = document.createElement("span");
-      sourceTag.className = "tag";
-      sourceTag.textContent = "来源网页";
-      tags.append(sourceTag);
-    }
+      const adviceWrap = node.querySelector(".item-advice");
+      const advice = state.filter === "cleanup" ? adviceForItem(item) : null;
+      if (advice) {
+        const adviceNode = document.createElement("span");
+        adviceNode.className = `advice-pill ${advice.type}`;
+        adviceNode.textContent = `${advice.label} · ${advice.reason}`;
+        adviceWrap.append(adviceNode);
+      } else {
+        adviceWrap.hidden = true;
+      }
 
-    for (const tag of item.tags || []) {
-      const tagNode = document.createElement("span");
-      tagNode.className = "tag";
-      tagNode.textContent = tag;
-      tags.append(tagNode);
-    }
+      if (item.kind === "file" && item.mime?.startsWith("image/") && item.blob) {
+        const image = document.createElement("img");
+        image.className = "item-media";
+        image.src = URL.createObjectURL(item.blob);
+        image.alt = item.title;
+        node.querySelector(".item-main").append(image);
+      }
 
-    const quickTags = node.querySelector(".quick-tags");
-    for (const tag of ["稍后看", "要发送", "素材", "待处理", "不重要"]) {
-      const button = document.createElement("button");
-      button.className = "quick-tag";
-      button.type = "button";
-      button.textContent = tag;
-      button.classList.toggle("is-active", (item.tags || []).includes(tag));
-      button.addEventListener("click", () => addQuickTag(item, tag));
-      quickTags.append(button);
-    }
+      const tags = node.querySelector(".item-tags");
+      if (item.sourceUrl) {
+        const sourceTag = document.createElement("span");
+        sourceTag.className = "tag";
+        sourceTag.textContent = "来源网页";
+        tags.append(sourceTag);
+      }
 
-    const copyButton = node.querySelector(".copy-action");
-    copyButton.disabled = item.kind !== "text";
-    copyButton.addEventListener("click", () => copyItem(item));
+      for (const tag of item.tags || []) {
+        const tagNode = document.createElement("span");
+        tagNode.className = "tag";
+        tagNode.textContent = tag;
+        tags.append(tagNode);
+      }
 
-    const downloadButton = node.querySelector(".download-action");
-    downloadButton.addEventListener("click", () => downloadItem(item));
+      const quickTags = node.querySelector(".quick-tags");
+      for (const tag of ["稍后看", "要发送", "素材", "待处理", "不重要"]) {
+        const button = document.createElement("button");
+        button.className = "quick-tag";
+        button.type = "button";
+        button.textContent = tag;
+        button.classList.toggle("is-active", (item.tags || []).includes(tag));
+        button.addEventListener("click", () => addQuickTag(item, tag));
+        quickTags.append(button);
+      }
 
-    const stashButton = node.querySelector(".stash-action");
-    stashButton.textContent = item.status === "stashed" ? "取消暂存" : "暂存";
-    stashButton.addEventListener("click", () => toggleStash(item));
+      const copyButton = node.querySelector(".copy-action");
+      copyButton.disabled = item.kind !== "text";
+      copyButton.addEventListener("click", () => copyItem(item));
 
-    node.querySelector(".delete-action").addEventListener("click", () => removeItem(item, node));
-    group.append(node);
+      const downloadButton = node.querySelector(".download-action");
+      downloadButton.addEventListener("click", () => downloadItem(item));
+
+      const stashButton = node.querySelector(".stash-action");
+      stashButton.textContent = item.status === "stashed" ? "取消暂存" : "暂存";
+      stashButton.addEventListener("click", () => toggleStash(item));
+
+      node.querySelector(".delete-action").addEventListener("click", () => removeItem(item, node));
+      group.append(node);
     }
 
     els.itemsList.append(group);
@@ -619,14 +686,25 @@ function renderItems() {
 
   setViewCopy();
   renderStats();
+  renderBulkBar();
 }
 
 async function refresh() {
   state.items = await getAllItems();
-  if (await removeDuplicateTextItems(state.items)) {
+  const removedTextDuplicates = await removeDuplicateTextItems(state.items);
+  if (removedTextDuplicates) {
     state.items = await getAllItems();
   }
+
+  const removedPathDuplicates = await removePathItemsCoveredByImages(state.items);
+  if (removedPathDuplicates) {
+    state.items = await getAllItems();
+  }
+  if (removedTextDuplicates || removedPathDuplicates) {
+    signalItemsChanged();
+  }
   state.companionIds = new Set(state.items.map((item) => item.id));
+  state.selectedIds = new Set([...state.selectedIds].filter((id) => state.items.some((item) => item.id === id)));
   renderItems();
 }
 
@@ -736,6 +814,18 @@ function downloadItem(item) {
   downloadBlob(blob, `${item.title.slice(0, 40) || "clipboard"}.txt`);
 }
 
+async function downloadSelectedItems() {
+  const items = selectedVisibleItems();
+  if (!items.length) return;
+
+  for (const item of items) {
+    downloadItem(item);
+    await wait(120);
+  }
+
+  showToast(`已开始保存 ${items.length} 条内容`);
+}
+
 function exportVisible() {
   const items = getVisibleItems().map((item) => ({
     id: item.id,
@@ -784,6 +874,7 @@ async function importCompanionItems() {
     els.companionStatus.textContent = "系统剪贴板已连接";
     els.companionStatus.classList.add("is-connected");
     const incoming = Array.isArray(data.items) ? data.items : [];
+    const incomingImages = incoming.filter((item) => item.type === "image");
     const existingTextKeys = new Set(
       state.items
         .filter((existingItem) => existingItem.kind === "text")
@@ -818,6 +909,13 @@ async function importCompanionItems() {
         const key = textNearDuplicateKey(item.text);
         if (existingTextKeys.has(key)) {
           state.companionIds.add(item.id);
+          continue;
+        }
+        const isCoveredImagePath = filePathInfo(item.text)
+          && incomingImages.some((image) => sameSourceMoment(item, image));
+        if (isCoveredImagePath) {
+          state.companionIds.add(item.id);
+          rememberDeletedCompanionId(item.id);
           continue;
         }
 
@@ -882,6 +980,26 @@ function wait(ms) {
 function confirmDelete(item) {
   return new Promise((resolve) => {
     els.confirmText.textContent = `「${item.title}」将从临泊站清出。`;
+    els.confirmModal.hidden = false;
+
+    const cleanup = (answer) => {
+      els.confirmModal.hidden = true;
+      els.cancelDeleteButton.removeEventListener("click", onCancel);
+      els.confirmDeleteButton.removeEventListener("click", onConfirm);
+      resolve(answer);
+    };
+
+    const onCancel = () => cleanup(false);
+    const onConfirm = () => cleanup(true);
+
+    els.cancelDeleteButton.addEventListener("click", onCancel);
+    els.confirmDeleteButton.addEventListener("click", onConfirm);
+  });
+}
+
+function confirmBulkDelete(count) {
+  return new Promise((resolve) => {
+    els.confirmText.textContent = `${count} 条内容将从临泊站清出。`;
     els.confirmModal.hidden = false;
 
     const cleanup = (answer) => {
@@ -984,6 +1102,26 @@ async function removeItem(item, node) {
   signalItemsChanged();
 }
 
+async function removeSelectedItems() {
+  const items = selectedVisibleItems();
+  if (!items.length) return;
+
+  const confirmed = await confirmBulkDelete(items.length);
+  if (!confirmed) return;
+
+  playDeleteSound();
+  for (const item of items) {
+    rememberDeletedCompanionId(item.id);
+    await deleteItem(item.id);
+    state.companionIds.delete(item.id);
+    state.selectedIds.delete(item.id);
+  }
+
+  showToast(`已清出 ${items.length} 个车位`);
+  await refresh();
+  signalItemsChanged();
+}
+
 function handlePaste(event) {
   const files = [...event.clipboardData.files];
   if (files.length) {
@@ -1031,6 +1169,23 @@ function bindEvents() {
   els.limitDismissButton.addEventListener("click", () => {
     localStorage.setItem(LIMIT_REMINDER_KEY, String(pendingItemCount()));
     renderLimitReminder();
+  });
+
+  els.selectAllVisible.addEventListener("change", () => {
+    const visibleItems = getVisibleItems();
+    if (els.selectAllVisible.checked) {
+      visibleItems.forEach((item) => state.selectedIds.add(item.id));
+    } else {
+      visibleItems.forEach((item) => state.selectedIds.delete(item.id));
+    }
+    renderItems();
+  });
+
+  els.bulkDownloadButton.addEventListener("click", downloadSelectedItems);
+  els.bulkDeleteButton.addEventListener("click", removeSelectedItems);
+  els.bulkClearButton.addEventListener("click", () => {
+    state.selectedIds.clear();
+    renderItems();
   });
 
   els.searchInput.addEventListener("input", () => {

@@ -83,12 +83,28 @@
           </div>
         </section>
 
+        <section id="bulkBar" class="bulk-bar" hidden>
+          <label class="bulk-select-all">
+            <input id="selectAllVisible" type="checkbox">
+            <span id="bulkCountText">已选择 0 条</span>
+          </label>
+          <div class="bulk-actions">
+            <button id="bulkDownloadButton" type="button">一键保存</button>
+            <button id="bulkDeleteButton" class="danger" type="button">一键删除</button>
+            <button id="bulkClearButton" type="button">取消选择</button>
+          </div>
+        </section>
+
         <section id="itemsList" class="items" aria-live="polite"></section>
       </section>
     </main>
 
     <template id="itemTemplate">
       <article class="item">
+        <label class="item-select">
+          <input class="select-action" type="checkbox">
+          <span>选择</span>
+        </label>
         <div class="item-main">
           <div class="item-topline">
             <span class="item-kind"></span>

@@ -141,6 +141,24 @@ function normalizeText(text) {
   return String(text || "").trim().replace(/\s+/g, " ");
 }
 
+function pathLines(text) {
+  return String(text || "")
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .filter((line) => /^[a-zA-Z]:\\/.test(line) || /^\\\\/.test(line));
+}
+
+function isFilePathText(text) {
+  return pathLines(text).length > 0;
+}
+
+function sameSourceMoment(a, b, windowMs = 5000) {
+  const sameSource = (a.sourceWindow && a.sourceWindow === b.sourceWindow)
+    || (a.sourceApp && a.sourceApp === b.sourceApp);
+  return Boolean(sameSource && Math.abs((a.createdAt || 0) - (b.createdAt || 0)) <= windowMs);
+}
+
 function stableHash(value) {
   let hash = 2166136261;
 
@@ -218,6 +236,7 @@ async function importCompanionItems() {
   if (!incoming.length) return false;
 
   const deletedIds = await deletedCompanionIds();
+  const incomingImages = incoming.filter((item) => item.type === "image");
   let changed = false;
 
   for (const item of incoming) {
@@ -244,6 +263,10 @@ async function importCompanionItems() {
       });
       changed = true;
     } else if (item.type === "text" && item.text) {
+      if (isFilePathText(item.text) && incomingImages.some((image) => sameSourceMoment(item, image))) {
+        continue;
+      }
+
       await putItem({
         id: item.id,
         kind: "text",
