@@ -540,8 +540,8 @@ function renderLimitReminder() {
 }
 
 function renderStats() {
-  els.totalCount.textContent = state.items.length;
-  els.fileCount.textContent = state.items.filter((item) => item.kind === "file").length;
+  els.totalCount.textContent = pendingItemCount();
+  els.fileCount.textContent = state.items.filter((item) => item.status === "active" && item.kind === "file").length;
   els.stashCount.textContent = state.items.filter((item) => item.status === "stashed").length;
   renderLimitReminder();
 }
