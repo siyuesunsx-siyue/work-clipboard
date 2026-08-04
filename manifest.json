@@ -36,6 +36,8 @@
     "storage",
     "clipboardRead",
     "clipboardWrite",
+    "alarms",
+    "notifications",
     "tabs",
     "scripting"
   ],

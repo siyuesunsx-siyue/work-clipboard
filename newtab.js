@@ -112,7 +112,9 @@ function rememberDeletedCompanionId(id) {
   if (!id?.startsWith("win-")) return;
 
   state.deletedCompanionIds.add(id);
-  localStorage.setItem(DELETED_IDS_KEY, JSON.stringify([...state.deletedCompanionIds].slice(-1000)));
+  const deletedIds = [...state.deletedCompanionIds].slice(-1000);
+  localStorage.setItem(DELETED_IDS_KEY, JSON.stringify(deletedIds));
+  chrome.storage.local.set({ [DELETED_IDS_KEY]: deletedIds }).catch(() => {});
 }
 
 function dismissedLimitCount() {
@@ -121,6 +123,15 @@ function dismissedLimitCount() {
 
 function pendingItemCount() {
   return state.items.filter((item) => item.status === "active").length;
+}
+
+function signalItemsChanged() {
+  chrome.runtime.sendMessage({ type: "ITEMS_CHANGED" }).catch(() => {});
+}
+
+function syncDeletedCompanionIdsToStorage() {
+  const deletedIds = [...state.deletedCompanionIds].slice(-1000);
+  chrome.storage.local.set({ [DELETED_IDS_KEY]: deletedIds }).catch(() => {});
 }
 
 function makeId() {
@@ -643,6 +654,7 @@ async function saveText() {
   els.textInput.value = "";
   showToast("文本已保存");
   await refresh();
+  signalItemsChanged();
 }
 
 async function saveFiles(files) {
@@ -669,6 +681,7 @@ async function saveFiles(files) {
   if (count) {
     showToast(`已保存 ${count} 个文件`);
     await refresh();
+    signalItemsChanged();
   }
 }
 
@@ -836,6 +849,7 @@ async function importCompanionItems() {
 
     if (changed) {
       await refresh();
+      signalItemsChanged();
     }
   } catch {
     els.companionStatus.textContent = "仅浏览器内捕获";
@@ -851,6 +865,7 @@ async function toggleStash(item) {
   });
   showToast(item.status === "stashed" ? "已取消暂存" : "已暂存");
   await refresh();
+  signalItemsChanged();
 }
 
 async function addQuickTag(item, tag) {
@@ -966,6 +981,7 @@ async function removeItem(item, node) {
   state.companionIds.delete(item.id);
   showToast("已清出车位");
   await refresh();
+  signalItemsChanged();
 }
 
 function handlePaste(event) {
@@ -985,6 +1001,13 @@ function handlePaste(event) {
 }
 
 function bindEvents() {
+  syncDeletedCompanionIdsToStorage();
+
+  if (location.hash === "#cleanup") {
+    state.filter = "cleanup";
+    els.filters.forEach((node) => node.classList.toggle("is-active", node.dataset.filter === "cleanup"));
+  }
+
   els.todayLabel.textContent = new Intl.DateTimeFormat("zh-CN", {
     weekday: "long",
     month: "long",
