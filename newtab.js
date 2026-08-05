@@ -274,22 +274,6 @@ function bytesToLabel(bytes) {
   return `${(bytes / 1024 ** index).toFixed(index ? 1 : 0)} ${units[index]}`;
 }
 
-function sessionKey(value) {
-  const date = new Date(value);
-  date.setMinutes(Math.floor(date.getMinutes() / 15) * 15, 0, 0);
-  return date.getTime();
-}
-
-function sessionLabel(value) {
-  const start = new Date(Number(value));
-  const end = new Date(start.getTime() + 15 * 60 * 1000);
-  const formatter = new Intl.DateTimeFormat("zh-CN", {
-    hour: "2-digit",
-    minute: "2-digit"
-  });
-  return `${formatter.format(start)} - ${formatter.format(end)} 临泊内容`;
-}
-
 function firstUrl(text) {
   const match = String(text || "").match(/https?:\/\/[^\s"'<>]+/i);
   return match ? match[0] : "";
@@ -574,92 +558,74 @@ function renderItems() {
     return;
   }
 
-  const groups = new Map();
   for (const item of visibleItems) {
-    const key = sessionKey(item.createdAt);
-    if (!groups.has(key)) groups.set(key, []);
-    groups.get(key).push(item);
-  }
+    const node = els.template.content.firstElementChild.cloneNode(true);
+    node.dataset.itemId = item.id;
+    node.classList.toggle("is-selected", state.selectedIds.has(item.id));
 
-  for (const [key, groupItems] of groups) {
-    const group = document.createElement("section");
-    group.className = "session-group";
-
-    const title = document.createElement("h3");
-    title.className = "session-title";
-    title.textContent = sessionLabel(key);
-    group.append(title);
-
-    for (const item of groupItems) {
-      const node = els.template.content.firstElementChild.cloneNode(true);
-      node.dataset.itemId = item.id;
-      node.classList.toggle("is-selected", state.selectedIds.has(item.id));
-
-      const selectInput = node.querySelector(".select-action");
-      selectInput.checked = state.selectedIds.has(item.id);
-      selectInput.addEventListener("change", () => {
-        if (selectInput.checked) {
-          state.selectedIds.add(item.id);
-        } else {
-          state.selectedIds.delete(item.id);
-        }
-        renderBulkBar();
-        node.classList.toggle("is-selected", selectInput.checked);
-      });
-      node.addEventListener("click", (event) => {
-        if (event.target.closest("input, button")) return;
-        selectInput.checked = !selectInput.checked;
-        selectInput.dispatchEvent(new Event("change"));
-      });
-
-      node.querySelector(".item-kind").textContent = item.kind === "file" ? "文件" : "文本";
-      node.querySelector(".item-time").textContent = formatDateTime(item.createdAt);
-      node.querySelector(".item-title").textContent = item.title;
-      node.querySelector(".item-preview").textContent = item.kind === "file"
-        ? `${item.mime || "未知类型"} · ${bytesToLabel(item.size)}`
-        : item.text.slice(0, 140);
-
-      const context = contextLine(item);
-      const contextNode = node.querySelector(".item-context");
-      contextNode.textContent = context || "暂无来源上下文";
-
-      const adviceWrap = node.querySelector(".item-advice");
-      const advice = state.filter === "cleanup" ? adviceForItem(item) : null;
-      if (advice) {
-        const adviceNode = document.createElement("span");
-        adviceNode.className = `advice-pill ${advice.type}`;
-        adviceNode.textContent = `${advice.label} · ${advice.reason}`;
-        adviceWrap.append(adviceNode);
+    const selectInput = node.querySelector(".select-action");
+    selectInput.checked = state.selectedIds.has(item.id);
+    selectInput.addEventListener("change", () => {
+      if (selectInput.checked) {
+        state.selectedIds.add(item.id);
       } else {
-        adviceWrap.hidden = true;
+        state.selectedIds.delete(item.id);
       }
+      renderBulkBar();
+      node.classList.toggle("is-selected", selectInput.checked);
+    });
+    node.addEventListener("click", (event) => {
+      if (event.target.closest("input, button")) return;
+      selectInput.checked = !selectInput.checked;
+      selectInput.dispatchEvent(new Event("change"));
+    });
 
-      if (item.kind === "file" && item.mime?.startsWith("image/") && item.blob) {
-        const image = document.createElement("img");
-        image.className = "item-media";
-        image.src = URL.createObjectURL(item.blob);
-        image.alt = item.title;
-        node.querySelector(".item-main").append(image);
-      }
+    node.querySelector(".item-kind").textContent = item.kind === "file" ? "文件" : "文本";
+    node.querySelector(".item-time").textContent = formatDateTime(item.createdAt);
+    node.querySelector(".item-title").textContent = item.title;
+    node.querySelector(".item-preview").textContent = item.kind === "file"
+      ? `${item.mime || "未知类型"} · ${bytesToLabel(item.size)}`
+      : item.text.slice(0, 120);
 
-      const tags = node.querySelector(".item-tags");
-      if (item.sourceUrl) {
-        const sourceTag = document.createElement("span");
-        sourceTag.className = "tag";
-        sourceTag.textContent = "来源网页";
-        tags.append(sourceTag);
-      }
+    const context = contextLine(item);
+    const contextNode = node.querySelector(".item-context");
+    contextNode.textContent = context || "暂无来源上下文";
 
-      for (const tag of (item.tags || []).slice(0, 2)) {
-        const tagNode = document.createElement("span");
-        tagNode.className = "tag";
-        tagNode.textContent = tag;
-        tags.append(tagNode);
-      }
-      group.append(node);
+    const adviceWrap = node.querySelector(".item-advice");
+    const advice = state.filter === "cleanup" ? adviceForItem(item) : null;
+    if (advice) {
+      const adviceNode = document.createElement("span");
+      adviceNode.className = `advice-pill ${advice.type}`;
+      adviceNode.textContent = `${advice.label} · ${advice.reason}`;
+      adviceWrap.append(adviceNode);
+    } else {
+      adviceWrap.hidden = true;
     }
 
-    els.itemsList.append(group);
+    if (item.kind === "file" && item.mime?.startsWith("image/") && item.blob) {
+      const image = document.createElement("img");
+      image.className = "item-media";
+      image.src = URL.createObjectURL(item.blob);
+      image.alt = item.title;
+      node.querySelector(".item-main").append(image);
+    }
+
+    const tags = node.querySelector(".item-tags");
+    if (item.sourceUrl) {
+      const sourceTag = document.createElement("span");
+      sourceTag.className = "tag";
+      sourceTag.textContent = "来源网页";
+      tags.append(sourceTag);
+    }
+
+    for (const tag of (item.tags || []).slice(0, 2)) {
+      const tagNode = document.createElement("span");
+      tagNode.className = "tag";
+      tagNode.textContent = tag;
+      tags.append(tagNode);
+    }
+
+    els.itemsList.append(node);
   }
 
   setViewCopy();
