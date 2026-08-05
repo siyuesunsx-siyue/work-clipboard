@@ -1,23 +1,23 @@
 :root {
-  --bg: #fbf3e8;
-  --bg-grid: rgba(209, 160, 86, 0.16);
+  --bg: #f9efe2;
+  --bg-grid: rgba(209, 160, 86, 0.1);
   --panel: #fff6eb;
   --panel-2: #f5debf;
-  --card: #fffaf2;
-  --card-soft: #f7ead9;
+  --card: #fffdf8;
+  --card-soft: #f5e7d4;
   --ink: #3a3129;
   --ink-invert: #46372b;
   --muted: #8d7866;
   --muted-invert: #8f7561;
-  --line: #ead8c2;
+  --line: #ead7bf;
   --accent: #78cdb8;
   --accent-strong: #3f9e8a;
   --accent-dark: #285f53;
   --warn: #cf6464;
   --gold: #d6a45d;
   --blue: #658ccf;
-  --shadow: 0 22px 60px rgba(116, 76, 37, 0.16);
-  --card-shadow: 0 16px 38px rgba(136, 93, 47, 0.13);
+  --shadow: 0 22px 54px rgba(116, 76, 37, 0.12);
+  --card-shadow: 0 12px 32px rgba(136, 93, 47, 0.1);
 }
 
 * {
@@ -32,9 +32,9 @@ body {
 body {
   margin: 0;
   background:
-    radial-gradient(circle at 16% 8%, rgba(255, 203, 138, 0.36), transparent 28%),
-    radial-gradient(circle at 88% 16%, rgba(120, 205, 184, 0.28), transparent 26%),
-    linear-gradient(135deg, transparent 0 47%, rgba(214, 164, 93, 0.12) 47% 49%, transparent 49% 100%),
+    radial-gradient(circle at 14% 7%, rgba(255, 203, 138, 0.26), transparent 30%),
+    radial-gradient(circle at 88% 14%, rgba(120, 205, 184, 0.2), transparent 28%),
+    linear-gradient(135deg, transparent 0 48%, rgba(214, 164, 93, 0.08) 48% 49%, transparent 49% 100%),
     linear-gradient(90deg, var(--bg-grid) 1px, transparent 1px),
     linear-gradient(0deg, var(--bg-grid) 1px, transparent 1px),
     var(--bg);
@@ -51,8 +51,8 @@ textarea {
 
 button {
   border: 1px solid rgba(141, 120, 102, 0.22);
-  border-radius: 10px;
-  background: #fffaf3;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #fffdf8, #fff7ed);
   color: var(--ink);
   cursor: pointer;
   min-height: 40px;
@@ -62,7 +62,7 @@ button {
 
 button:hover {
   border-color: var(--accent);
-  box-shadow: 0 8px 20px rgba(99, 72, 45, 0.12);
+  box-shadow: 0 9px 22px rgba(99, 72, 45, 0.1);
   transform: translateY(-1px);
 }
 
@@ -89,13 +89,13 @@ textarea:focus-visible {
   position: sticky;
   top: 0;
   height: 100vh;
-  padding: 28px 22px;
+  padding: 30px 22px;
   color: var(--ink-invert);
   background:
-    linear-gradient(180deg, rgba(255, 248, 238, 0.98), rgba(246, 224, 195, 0.96)),
+    linear-gradient(180deg, rgba(255, 250, 242, 0.98), rgba(248, 230, 205, 0.94)),
     var(--panel);
   border-right: 1px solid rgba(214, 164, 93, 0.24);
-  box-shadow: 18px 0 48px rgba(133, 88, 42, 0.12);
+  box-shadow: 14px 0 42px rgba(133, 88, 42, 0.1);
 }
 
 .sidebar::after {
@@ -104,7 +104,7 @@ textarea:focus-visible {
   inset: auto 22px 22px;
   height: 2px;
   border-radius: 999px;
-  background: repeating-linear-gradient(90deg, rgba(214, 164, 93, 0.55) 0 26px, transparent 26px 38px);
+  background: repeating-linear-gradient(90deg, rgba(214, 164, 93, 0.42) 0 24px, transparent 24px 38px);
 }
 
 .brand {
@@ -150,9 +150,9 @@ h1 {
 
 .stats div {
   min-height: 78px;
-  border: 1px solid rgba(214, 164, 93, 0.24);
-  border-radius: 12px;
-  background: rgba(255, 250, 242, 0.68);
+  border: 1px solid rgba(214, 164, 93, 0.2);
+  border-radius: 14px;
+  background: rgba(255, 252, 247, 0.7);
   padding: 13px 10px;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.64);
 }
@@ -173,9 +173,9 @@ h1 {
 
 .companion-status {
   margin: -8px 0 18px;
-  border: 1px solid rgba(214, 164, 93, 0.25);
-  border-radius: 12px;
-  background: rgba(255, 250, 242, 0.7);
+  border: 1px solid rgba(214, 164, 93, 0.2);
+  border-radius: 14px;
+  background: rgba(255, 252, 247, 0.72);
   color: var(--muted-invert);
   padding: 10px 11px;
   font-size: 13px;
@@ -197,7 +197,7 @@ h1 {
   text-align: left;
   background: transparent;
   color: var(--ink-invert);
-  border-color: rgba(214, 164, 93, 0.25);
+  border-color: rgba(214, 164, 93, 0.2);
 }
 
 .filter.is-active {
@@ -218,8 +218,8 @@ h1 {
 }
 
 .workspace {
-  padding: 28px;
-  max-width: 1280px;
+  padding: 30px;
+  max-width: 1360px;
   width: 100%;
 }
 
@@ -240,7 +240,7 @@ input,
 textarea {
   width: 100%;
   border: 1px solid rgba(234, 216, 194, 0.98);
-  border-radius: 12px;
+  border-radius: 14px;
   background: rgba(255, 252, 247, 0.96);
   color: var(--ink);
 }
@@ -264,8 +264,8 @@ textarea {
 
 .capture-zone {
   margin-top: 18px;
-  border: 1px solid rgba(214, 164, 93, 0.22);
-  border-radius: 18px;
+  border: 1px solid rgba(214, 164, 93, 0.18);
+  border-radius: 20px;
   background:
     linear-gradient(180deg, rgba(255, 252, 247, 0.98), rgba(248, 235, 217, 0.95));
   box-shadow: var(--shadow);
@@ -279,8 +279,8 @@ textarea {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background: repeating-linear-gradient(90deg, transparent 0 54px, rgba(214, 164, 93, 0.12) 54px 56px, transparent 56px 72px);
-  opacity: 0.5;
+  background: repeating-linear-gradient(90deg, transparent 0 58px, rgba(214, 164, 93, 0.08) 58px 60px, transparent 60px 76px);
+  opacity: 0.55;
 }
 
 .capture-zone > * {
@@ -314,7 +314,7 @@ textarea {
 }
 
 .list-head h2 {
-  font-size: 28px;
+  font-size: 27px;
   line-height: 1.15;
 }
 
@@ -324,12 +324,12 @@ textarea {
   justify-content: space-between;
   gap: 14px;
   margin: -2px 0 16px;
-  border: 1px solid rgba(120, 205, 184, 0.38);
-  border-radius: 16px;
+  border: 1px solid rgba(120, 205, 184, 0.32);
+  border-radius: 18px;
   background:
     linear-gradient(135deg, rgba(120, 205, 184, 0.18), rgba(214, 164, 93, 0.14)),
     rgba(255, 250, 242, 0.96);
-  box-shadow: 0 18px 42px rgba(116, 76, 37, 0.14);
+  box-shadow: 0 14px 34px rgba(116, 76, 37, 0.1);
   padding: 14px 16px;
 }
 
@@ -389,10 +389,10 @@ textarea {
   align-items: center;
   gap: 12px;
   margin: -4px 0 16px;
-  border: 1px solid rgba(120, 205, 184, 0.34);
-  border-radius: 16px;
-  background: rgba(255, 250, 242, 0.97);
-  box-shadow: 0 16px 36px rgba(116, 76, 37, 0.15);
+  border: 1px solid rgba(120, 205, 184, 0.28);
+  border-radius: 18px;
+  background: rgba(255, 253, 248, 0.97);
+  box-shadow: 0 12px 30px rgba(116, 76, 37, 0.12);
   padding: 10px 12px;
 }
 
@@ -434,9 +434,11 @@ textarea {
   flex-direction: column;
   position: relative;
   overflow: hidden;
-  border: 1px solid rgba(234, 216, 194, 0.96);
-  border-radius: 16px;
-  background: var(--card);
+  border: 1px solid rgba(234, 216, 194, 0.78);
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, rgba(255, 253, 248, 0.98), rgba(255, 248, 238, 0.96)),
+    var(--card);
   box-shadow: var(--card-shadow);
   cursor: pointer;
   padding: 14px;
@@ -454,8 +456,8 @@ textarea {
   left: 0;
   top: 0;
   bottom: 0;
-  width: 7px;
-  background: linear-gradient(180deg, var(--accent), var(--gold));
+  width: 5px;
+  background: linear-gradient(180deg, rgba(120, 205, 184, 0.95), rgba(214, 164, 93, 0.88));
 }
 
 .item::after {
@@ -465,7 +467,7 @@ textarea {
   width: 32px;
   height: 2px;
   border-radius: 999px;
-  background: rgba(214, 164, 93, 0.38);
+  background: rgba(214, 164, 93, 0.28);
 }
 
 .item-select {
@@ -478,9 +480,9 @@ textarea {
   justify-content: center;
   width: 28px;
   height: 28px;
-  border: 1px solid rgba(120, 205, 184, 0.36);
-  border-radius: 8px;
-  background: rgba(255, 250, 242, 0.94);
+  border: 1px solid rgba(120, 205, 184, 0.3);
+  border-radius: 10px;
+  background: rgba(255, 253, 248, 0.96);
 }
 
 .item-main {
@@ -504,7 +506,7 @@ textarea {
 .item-kind,
 .advice-pill {
   border-radius: 999px;
-  background: rgba(120, 205, 184, 0.18);
+  background: rgba(120, 205, 184, 0.16);
   color: var(--accent-dark);
   padding: 4px 9px;
   font-weight: 700;
@@ -575,7 +577,7 @@ textarea {
   object-fit: contain;
   margin-top: 10px;
   border: 1px solid var(--line);
-  border-radius: 14px;
+  border-radius: 16px;
   background: #fffdf8;
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.54);
 }
