@@ -991,21 +991,26 @@ function playDeleteSound() {
 }
 
 function burstConfetti(originNode) {
-  const rect = originNode.getBoundingClientRect();
-  const colors = ["#19c8b1", "#f4fffb", "#d5ad47", "#8feee2", "#2f73d8", "#12332d"];
+  const rect = originNode?.getBoundingClientRect?.() || {
+    left: window.innerWidth * 0.5 - 120,
+    top: window.innerHeight * 0.28,
+    width: 240,
+    height: 80
+  };
+  const colors = ["#e6a3a0", "#f4b9ad", "#ffd8c1", "#f3c678", "#fff8ec", "#8d5b4d"];
   const centerX = rect.left + rect.width * 0.72;
   const centerY = rect.top + Math.min(rect.height * 0.45, 120);
 
-  for (let index = 0; index < 56; index += 1) {
+  for (let index = 0; index < 84; index += 1) {
     const piece = document.createElement("span");
     piece.className = "confetti";
-    const angle = -145 + Math.random() * 110;
-    const distance = 90 + Math.random() * 260;
-    const drift = -90 + Math.random() * 180;
+    const angle = -150 + Math.random() * 120;
+    const distance = 110 + Math.random() * 320;
+    const drift = -130 + Math.random() * 260;
     const x = Math.cos((angle * Math.PI) / 180) * distance;
-    const y = Math.sin((angle * Math.PI) / 180) * distance + 190 + Math.random() * 120;
-    const width = 5 + Math.random() * 5;
-    const height = 7 + Math.random() * 8;
+    const y = Math.sin((angle * Math.PI) / 180) * distance + 230 + Math.random() * 150;
+    const width = 3 + Math.random() * 4;
+    const height = 5 + Math.random() * 6;
 
     piece.style.left = `${centerX + drift * 0.22}px`;
     piece.style.top = `${centerY}px`;
@@ -1015,10 +1020,10 @@ function burstConfetti(originNode) {
     piece.style.setProperty("--dy", `${y}px`);
     piece.style.setProperty("--spin", `${180 + Math.random() * 620}deg`);
     piece.style.background = colors[index % colors.length];
-    piece.style.animationDelay = `${Math.random() * 160}ms`;
-    piece.style.animationDuration = `${1250 + Math.random() * 550}ms`;
+    piece.style.animationDelay = `${Math.random() * 220}ms`;
+    piece.style.animationDuration = `${1600 + Math.random() * 700}ms`;
     els.celebrationLayer.append(piece);
-    window.setTimeout(() => piece.remove(), 2100);
+    window.setTimeout(() => piece.remove(), 2600);
   }
 }
 
@@ -1049,6 +1054,14 @@ async function removeSelectedItems() {
   if (!confirmed) return;
 
   playDeleteSound();
+  burstConfetti(els.bulkBar.hidden ? null : els.bulkBar);
+
+  const selectedNodes = [...els.itemsList.querySelectorAll(".item.is-selected")];
+  selectedNodes.forEach((node) => node.classList.add("is-removing"));
+  if (selectedNodes.length) {
+    await wait(420);
+  }
+
   for (const item of items) {
     rememberDeletedCompanionId(item.id);
     await deleteItem(item.id);
