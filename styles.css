@@ -1,21 +1,21 @@
 :root {
-  --bg: #f9efe2;
+  --bg: #fbefe9;
   --bg-grid: rgba(209, 160, 86, 0.1);
-  --panel: #fff6eb;
-  --panel-2: #f5debf;
-  --card: #fffdf8;
-  --card-soft: #f5e7d4;
+  --panel: #fff4ee;
+  --panel-2: #f3d9cf;
+  --card: #fffafa;
+  --card-soft: #f8e5dd;
   --ink: #3a3129;
   --ink-invert: #46372b;
-  --muted: #8d7866;
-  --muted-invert: #8f7561;
-  --line: #ead7bf;
-  --accent: #78cdb8;
-  --accent-strong: #3f9e8a;
-  --accent-dark: #285f53;
+  --muted: #927669;
+  --muted-invert: #8d6d62;
+  --line: #ead1c7;
+  --accent: #e6a3a0;
+  --accent-strong: #c97878;
+  --accent-dark: #7d4b48;
   --warn: #cf6464;
-  --gold: #d6a45d;
-  --blue: #658ccf;
+  --gold: #d2a15f;
+  --blue: #9b82bd;
   --shadow: 0 22px 54px rgba(116, 76, 37, 0.12);
   --card-shadow: 0 12px 32px rgba(136, 93, 47, 0.1);
 }
@@ -32,8 +32,8 @@ body {
 body {
   margin: 0;
   background:
-    radial-gradient(circle at 14% 7%, rgba(255, 203, 138, 0.26), transparent 30%),
-    radial-gradient(circle at 88% 14%, rgba(120, 205, 184, 0.2), transparent 28%),
+    radial-gradient(circle at 14% 7%, rgba(246, 194, 166, 0.3), transparent 30%),
+    radial-gradient(circle at 88% 14%, rgba(226, 163, 160, 0.22), transparent 28%),
     linear-gradient(135deg, transparent 0 48%, rgba(214, 164, 93, 0.08) 48% 49%, transparent 49% 100%),
     linear-gradient(90deg, var(--bg-grid) 1px, transparent 1px),
     linear-gradient(0deg, var(--bg-grid) 1px, transparent 1px),
@@ -75,7 +75,7 @@ button:disabled {
 button:focus-visible,
 input:focus-visible,
 textarea:focus-visible {
-  outline: 3px solid rgba(120, 205, 184, 0.32);
+  outline: 3px solid rgba(230, 163, 160, 0.34);
   outline-offset: 2px;
 }
 
@@ -92,7 +92,7 @@ textarea:focus-visible {
   padding: 30px 22px;
   color: var(--ink-invert);
   background:
-    linear-gradient(180deg, rgba(255, 250, 242, 0.98), rgba(248, 230, 205, 0.94)),
+    linear-gradient(180deg, rgba(255, 247, 242, 0.98), rgba(246, 220, 210, 0.94)),
     var(--panel);
   border-right: 1px solid rgba(214, 164, 93, 0.24);
   box-shadow: 14px 0 42px rgba(133, 88, 42, 0.1);
@@ -182,9 +182,9 @@ h1 {
 }
 
 .companion-status.is-connected {
-  background: rgba(120, 205, 184, 0.18);
+  background: rgba(230, 163, 160, 0.18);
   color: var(--accent-dark);
-  border-color: rgba(120, 205, 184, 0.46);
+  border-color: rgba(230, 163, 160, 0.42);
 }
 
 .filters {
@@ -201,11 +201,11 @@ h1 {
 }
 
 .filter.is-active {
-  background: linear-gradient(135deg, #bfe9db, #7ecfba);
+  background: linear-gradient(135deg, #f4c8bf, #e6a3a0);
   border-color: transparent;
   color: var(--accent-dark);
   font-weight: 700;
-  box-shadow: 0 10px 22px rgba(120, 205, 184, 0.22);
+  box-shadow: 0 10px 22px rgba(201, 120, 120, 0.18);
 }
 
 .primary-action {
@@ -289,7 +289,7 @@ textarea {
 
 .capture-zone.is-over {
   border-color: var(--accent);
-  background: #f0fff8;
+  background: #fff2ee;
 }
 
 .capture-actions {
@@ -324,10 +324,10 @@ textarea {
   justify-content: space-between;
   gap: 14px;
   margin: -2px 0 16px;
-  border: 1px solid rgba(120, 205, 184, 0.32);
+  border: 1px solid rgba(230, 163, 160, 0.34);
   border-radius: 18px;
   background:
-    linear-gradient(135deg, rgba(120, 205, 184, 0.18), rgba(214, 164, 93, 0.14)),
+    linear-gradient(135deg, rgba(230, 163, 160, 0.18), rgba(210, 161, 95, 0.13)),
     rgba(255, 250, 242, 0.96);
   box-shadow: 0 14px 34px rgba(116, 76, 37, 0.1);
   padding: 14px 16px;
@@ -389,7 +389,7 @@ textarea {
   align-items: center;
   gap: 12px;
   margin: -4px 0 16px;
-  border: 1px solid rgba(120, 205, 184, 0.28);
+  border: 1px solid rgba(230, 163, 160, 0.3);
   border-radius: 18px;
   background: rgba(255, 253, 248, 0.97);
   box-shadow: 0 12px 30px rgba(116, 76, 37, 0.12);
@@ -447,7 +447,7 @@ textarea {
 
 .item.is-selected {
   border-color: var(--accent);
-  box-shadow: 0 18px 46px rgba(120, 205, 184, 0.26);
+  box-shadow: 0 18px 46px rgba(201, 120, 120, 0.18);
 }
 
 .item::before {
@@ -457,7 +457,7 @@ textarea {
   top: 0;
   bottom: 0;
   width: 5px;
-  background: linear-gradient(180deg, rgba(120, 205, 184, 0.95), rgba(214, 164, 93, 0.88));
+  background: linear-gradient(180deg, rgba(230, 163, 160, 0.95), rgba(210, 161, 95, 0.88));
 }
 
 .item::after {
@@ -480,7 +480,7 @@ textarea {
   justify-content: center;
   width: 28px;
   height: 28px;
-  border: 1px solid rgba(120, 205, 184, 0.3);
+  border: 1px solid rgba(230, 163, 160, 0.34);
   border-radius: 10px;
   background: rgba(255, 253, 248, 0.96);
 }
@@ -506,7 +506,7 @@ textarea {
 .item-kind,
 .advice-pill {
   border-radius: 999px;
-  background: rgba(120, 205, 184, 0.16);
+  background: rgba(230, 163, 160, 0.16);
   color: var(--accent-dark);
   padding: 4px 9px;
   font-weight: 700;
@@ -590,10 +590,10 @@ textarea {
 }
 
 .tag {
-  border: 1px solid rgba(120, 205, 184, 0.34);
+  border: 1px solid rgba(230, 163, 160, 0.34);
   border-radius: 999px;
   color: var(--accent-dark);
-  background: rgba(120, 205, 184, 0.13);
+  background: rgba(230, 163, 160, 0.13);
   padding: 3px 9px;
   font-size: 12px;
 }
